@@ -1,0 +1,633 @@
+2026-06-28 22:38:13  INFO      ╔══════════════════════════════════════════╗
+2026-06-28 22:38:13  INFO      ║   SPY ORB Trading Bot  —  paper mode     ║
+2026-06-28 22:38:13  INFO      ╚══════════════════════════════════════════╝
+2026-06-28 22:38:13  INFO      Alpaca connected | account: a354027c-1987-41e9-8015-2700e43cb5d6
+2026-06-28 22:38:13  INFO      Account equity: $100,000.00  |  Buying power: $400,000.00
+2026-06-28 22:38:13  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-28 22:38:13  ERROR     Pre-market analysis failed: subscription does not permit querying recent SIP data
+Traceback (most recent call last):
+  File "C:\Users\swema\Claude\Projects\Bot Researcher\stock_bot\bot.py", line 65, in job_pre_market
+    df   = broker.daily_bars(SYMBOL, days=250)
+  File "C:\Users\swema\Claude\Projects\Bot Researcher\stock_bot\broker.py", line 44, in daily_bars
+    bars = self.api.get_bars(
+           ~~~~~~~~~~~~~~~~~^
+        symbol,
+        ^^^^^^^
+    ...<4 lines>...
+        adjustment="all",   # split/dividend adjusted
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).df
+    ^
+  File "C:\Users\swema\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\alpaca_trade_api\rest.py", line 735, in get_bars
+    bars = list(self.get_bars_iter(symbol,
+                                   timeframe,
+    ...<6 lines>...
+                                   sort=sort,
+                                   raw=True))
+  File "C:\Users\swema\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\alpaca_trade_api\rest.py", line 718, in get_bars_iter
+    for bar in bars:
+               ^^^^
+  File "C:\Users\swema\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\alpaca_trade_api\rest.py", line 594, in _data_get
+    resp = self.data_get(path, data=data, feed=feed,
+                         api_version=api_version)
+  File "C:\Users\swema\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\alpaca_trade_api\rest.py", line 274, in data_get
+    return self._request(
+           ~~~~~~~~~~~~~^
+        'GET', path, data, base_url=base_url, api_version=api_version,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\swema\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\alpaca_trade_api\rest.py", line 222, in _request
+    return self._one_request(method, url, opts, retry)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\swema\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\alpaca_trade_api\rest.py", line 248, in _one_request
+    raise_api_error(resp, http_error)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\swema\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\alpaca_trade_api\rest.py", line 83, in raise_api_error
+    raise APIError(error, http_error) from None
+alpaca_trade_api.rest.APIError: subscription does not permit querying recent SIP data
+2026-06-28 22:38:13  INFO      Schedule loaded:
+2026-06-28 22:38:13  INFO        08:00  Pre-market analysis
+2026-06-28 22:38:13  INFO        09:30  Market open / ORB starts
+2026-06-28 22:38:13  INFO        09:45  ORB closes → watch for breakout
+2026-06-28 22:38:13  INFO        15:55  Close all positions
+2026-06-28 22:38:13  INFO        17:00  After-hours analysis
+2026-06-28 22:38:13  INFO      Bot running — waiting for next scheduled event …
+2026-06-28 22:39:49  INFO      ╔══════════════════════════════════════════╗
+2026-06-28 22:39:49  INFO      ║   SPY ORB Trading Bot  —  paper mode     ║
+2026-06-28 22:39:49  INFO      ╚══════════════════════════════════════════╝
+2026-06-28 22:39:50  INFO      Alpaca connected | account: a354027c-1987-41e9-8015-2700e43cb5d6
+2026-06-28 22:39:50  INFO      Account equity: $100,000.00  |  Buying power: $400,000.00
+2026-06-28 22:39:50  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-28 22:39:50  INFO      Fetched 206 daily bars for SPY
+2026-06-28 22:39:50  ERROR     Pre-market analysis failed: Need at least 210 bars, got 206
+Traceback (most recent call last):
+  File "C:\Users\swema\Claude\Projects\Bot Researcher\stock_bot\bot.py", line 66, in job_pre_market
+    snap = analyse(df, SYMBOL)
+  File "C:\Users\swema\Claude\Projects\Bot Researcher\stock_bot\analysis.py", line 105, in analyse
+    raise ValueError(f"Need at least {EMA_TREND + 10} bars, got {len(df)}")
+ValueError: Need at least 210 bars, got 206
+2026-06-28 22:39:50  INFO      Schedule loaded:
+2026-06-28 22:39:50  INFO        08:00  Pre-market analysis
+2026-06-28 22:39:50  INFO        09:30  Market open / ORB starts
+2026-06-28 22:39:50  INFO        09:45  ORB closes → watch for breakout
+2026-06-28 22:39:50  INFO        15:55  Close all positions
+2026-06-28 22:39:50  INFO        17:00  After-hours analysis
+2026-06-28 22:39:50  INFO      Bot running — waiting for next scheduled event …
+2026-06-28 22:40:27  INFO      ╔══════════════════════════════════════════╗
+2026-06-28 22:40:27  INFO      ║   SPY ORB Trading Bot  —  paper mode     ║
+2026-06-28 22:40:27  INFO      ╚══════════════════════════════════════════╝
+2026-06-28 22:40:27  INFO      Alpaca connected | account: a354027c-1987-41e9-8015-2700e43cb5d6
+2026-06-28 22:40:28  INFO      Account equity: $100,000.00  |  Buying power: $400,000.00
+2026-06-28 22:40:28  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-28 22:40:28  INFO      Fetched 206 daily bars for SPY
+2026-06-28 22:40:28  INFO      ───────────────────────────────────────────────────────
+2026-06-28 22:40:28  INFO        PRE-MARKET ANALYSIS  |  SPY  |  2026-06-26
+2026-06-28 22:40:28  INFO      ───────────────────────────────────────────────────────
+2026-06-28 22:40:28  INFO        Close:        729.35
+2026-06-28 22:40:28  INFO        EMA20:        738.55   EMA50:      728.31   EMA200:     691.48
+2026-06-28 22:40:28  INFO        RSI:           44.26   MACD-H:    -2.6058   ATR:         10.41
+2026-06-28 22:40:28  INFO        BB:           721.98 — 762.44
+2026-06-28 22:40:28  INFO        Support:      716.58   Resist:     758.45
+2026-06-28 22:40:28  INFO        Bull score: -1/5
+2026-06-28 22:40:28  INFO          ✅ Price above EMA200 (uptrend)
+2026-06-28 22:40:28  INFO          ✅ EMA20 > EMA50 (short-term bullish)
+2026-06-28 22:40:28  INFO          🔴 RSI 44.3 — bearish momentum
+2026-06-28 22:40:28  INFO          🔴 MACD histogram expanding bearish
+2026-06-28 22:40:28  INFO          🔴 Price in lower BB (18%)
+2026-06-28 22:40:28  INFO        ➤ BIAS: FLAT
+2026-06-28 22:40:28  INFO      ───────────────────────────────────────────────────────
+2026-06-28 22:40:28  INFO      Pre-market done | Bias for today: FLAT
+2026-06-28 22:40:28  INFO      Schedule loaded:
+2026-06-28 22:40:28  INFO        08:00  Pre-market analysis
+2026-06-28 22:40:28  INFO        09:30  Market open / ORB starts
+2026-06-28 22:40:28  INFO        09:45  ORB closes → watch for breakout
+2026-06-28 22:40:28  INFO        15:55  Close all positions
+2026-06-28 22:40:28  INFO        17:00  After-hours analysis
+2026-06-28 22:40:28  INFO      Bot running — waiting for next scheduled event …
+2026-06-28 22:42:48  INFO      ╔══════════════════════════════════════════╗
+2026-06-28 22:42:48  INFO      ║   SPY ORB Trading Bot  —  paper mode     ║
+2026-06-28 22:42:48  INFO      ╚══════════════════════════════════════════╝
+2026-06-28 22:42:48  INFO      Alpaca connected | account: a354027c-1987-41e9-8015-2700e43cb5d6
+2026-06-28 22:42:48  INFO      Account equity: $100,000.00  |  Buying power: $400,000.00
+2026-06-28 22:42:48  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-28 22:42:48  INFO      Fetched 206 daily bars for SPY
+2026-06-28 22:42:48  INFO      ───────────────────────────────────────────────────────
+2026-06-28 22:42:48  INFO        PRE-MARKET ANALYSIS  |  SPY  |  2026-06-26
+2026-06-28 22:42:48  INFO      ───────────────────────────────────────────────────────
+2026-06-28 22:42:48  INFO        Close:        729.35
+2026-06-28 22:42:48  INFO        EMA20:        738.55   EMA50:      728.31   EMA200:     691.48
+2026-06-28 22:42:48  INFO        RSI:           44.26   MACD-H:    -2.6058   ATR:         10.41
+2026-06-28 22:42:48  INFO        BB:           721.98 — 762.44
+2026-06-28 22:42:48  INFO        Support:      716.58   Resist:     758.45
+2026-06-28 22:42:48  INFO        Bull score: -1/5
+2026-06-28 22:42:48  INFO          ✅ Price above EMA200 (uptrend)
+2026-06-28 22:42:48  INFO          ✅ EMA20 > EMA50 (short-term bullish)
+2026-06-28 22:42:48  INFO          🔴 RSI 44.3 — bearish momentum
+2026-06-28 22:42:48  INFO          🔴 MACD histogram expanding bearish
+2026-06-28 22:42:48  INFO          🔴 Price in lower BB (18%)
+2026-06-28 22:42:48  INFO        ➤ BIAS: FLAT
+2026-06-28 22:42:48  INFO      ───────────────────────────────────────────────────────
+2026-06-28 22:42:48  INFO      Pre-market done | Bias for today: FLAT
+2026-06-28 22:42:48  INFO      Schedule loaded:
+2026-06-28 22:42:48  INFO        08:00  Pre-market analysis
+2026-06-28 22:42:48  INFO        09:30  Market open / ORB starts
+2026-06-28 22:42:48  INFO        09:45  ORB closes → watch for breakout
+2026-06-28 22:42:48  INFO        15:55  Close all positions
+2026-06-28 22:42:48  INFO        17:00  After-hours analysis
+2026-06-28 22:42:48  INFO      Bot running — waiting for next scheduled event …
+2026-06-28 23:08:07  INFO      ╔══════════════════════════════════════════╗
+2026-06-28 23:08:07  INFO      ║   SPY ORB Trading Bot  —  paper mode     ║
+2026-06-28 23:08:07  INFO      ╚══════════════════════════════════════════╝
+2026-06-28 23:08:07  INFO      Alpaca connected | account: a354027c-1987-41e9-8015-2700e43cb5d6
+2026-06-28 23:08:07  INFO      Supabase connected ✅
+2026-06-28 23:08:07  INFO      Account equity: $100,000.00  |  Buying power: $400,000.00
+2026-06-28 23:08:07  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-28 23:08:08  INFO      Fetched 206 daily bars for SPY
+2026-06-28 23:08:08  INFO      ───────────────────────────────────────────────────────
+2026-06-28 23:08:08  INFO        PRE-MARKET ANALYSIS  |  SPY  |  2026-06-26
+2026-06-28 23:08:08  INFO      ───────────────────────────────────────────────────────
+2026-06-28 23:08:08  INFO        Close:        729.35
+2026-06-28 23:08:08  INFO        EMA20:        738.55   EMA50:      728.31   EMA200:     691.48
+2026-06-28 23:08:08  INFO        RSI:           44.26   MACD-H:    -2.6058   ATR:         10.41
+2026-06-28 23:08:08  INFO        BB:           721.98 — 762.44
+2026-06-28 23:08:08  INFO        Support:      716.58   Resist:     758.45
+2026-06-28 23:08:08  INFO        Bull score: -1/5
+2026-06-28 23:08:08  INFO          ✅ Price above EMA200 (uptrend)
+2026-06-28 23:08:08  INFO          ✅ EMA20 > EMA50 (short-term bullish)
+2026-06-28 23:08:08  INFO          🔴 RSI 44.3 — bearish momentum
+2026-06-28 23:08:08  INFO          🔴 MACD histogram expanding bearish
+2026-06-28 23:08:08  INFO          🔴 Price in lower BB (18%)
+2026-06-28 23:08:08  INFO        ➤ BIAS: FLAT
+2026-06-28 23:08:08  INFO      ───────────────────────────────────────────────────────
+2026-06-28 23:08:08  ERROR     Pre-market analysis failed: 'NoneType' object has no attribute 'log_analysis'
+Traceback (most recent call last):
+  File "C:\Users\swema\Claude\Projects\Bot Researcher\stock_bot\bot.py", line 69, in job_pre_market
+    db.log_analysis(snap)          # → Supabase
+    ^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'log_analysis'
+2026-06-28 23:08:08  INFO      Schedule loaded:
+2026-06-28 23:08:08  INFO        08:00  Pre-market analysis
+2026-06-28 23:08:08  INFO        09:30  Market open / ORB starts
+2026-06-28 23:08:08  INFO        09:45  ORB closes → watch for breakout
+2026-06-28 23:08:08  INFO        15:55  Close all positions
+2026-06-28 23:08:08  INFO        17:00  After-hours analysis
+2026-06-28 23:08:08  INFO      Bot running — waiting for next scheduled event …
+2026-06-28 23:10:24  INFO      ╔══════════════════════════════════════════╗
+2026-06-28 23:10:24  INFO      ║   SPY ORB Trading Bot  —  paper mode     ║
+2026-06-28 23:10:24  INFO      ╚══════════════════════════════════════════╝
+2026-06-28 23:10:24  INFO      Alpaca connected | account: a354027c-1987-41e9-8015-2700e43cb5d6
+2026-06-28 23:10:24  INFO      Supabase connected ✅
+2026-06-28 23:10:25  INFO      Account equity: $100,000.00  |  Buying power: $400,000.00
+2026-06-28 23:10:25  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-28 23:10:25  INFO      Fetched 206 daily bars for SPY
+2026-06-28 23:10:25  INFO      ───────────────────────────────────────────────────────
+2026-06-28 23:10:25  INFO        PRE-MARKET ANALYSIS  |  SPY  |  2026-06-26
+2026-06-28 23:10:25  INFO      ───────────────────────────────────────────────────────
+2026-06-28 23:10:25  INFO        Close:        729.35
+2026-06-28 23:10:25  INFO        EMA20:        738.55   EMA50:      728.31   EMA200:     691.48
+2026-06-28 23:10:25  INFO        RSI:           44.26   MACD-H:    -2.6058   ATR:         10.41
+2026-06-28 23:10:25  INFO        BB:           721.98 — 762.44
+2026-06-28 23:10:25  INFO        Support:      716.58   Resist:     758.45
+2026-06-28 23:10:25  INFO        Bull score: -1/5
+2026-06-28 23:10:25  INFO          ✅ Price above EMA200 (uptrend)
+2026-06-28 23:10:25  INFO          ✅ EMA20 > EMA50 (short-term bullish)
+2026-06-28 23:10:25  INFO          🔴 RSI 44.3 — bearish momentum
+2026-06-28 23:10:25  INFO          🔴 MACD histogram expanding bearish
+2026-06-28 23:10:25  INFO          🔴 Price in lower BB (18%)
+2026-06-28 23:10:25  INFO        ➤ BIAS: FLAT
+2026-06-28 23:10:25  INFO      ───────────────────────────────────────────────────────
+2026-06-28 23:10:26  INFO      HTTP Request: POST https://mjtwpiwdvhcoegjnpcjv.supabase.co/rest/v1/bot_analyses "HTTP/2 401 Unauthorized"
+2026-06-28 23:10:26  ERROR     Supabase log_analysis failed: {'message': 'permission denied for table bot_analyses', 'code': '42501', 'hint': 'Grant the required privileges to the current role with: GRANT SELECT, INSERT ON public.bot_analyses TO anon;', 'details': None}
+2026-06-28 23:10:26  INFO      Pre-market done | Bias for today: FLAT
+2026-06-28 23:10:26  INFO      Schedule loaded:
+2026-06-28 23:10:26  INFO        08:00  Pre-market analysis
+2026-06-28 23:10:26  INFO        09:30  Market open / ORB starts
+2026-06-28 23:10:26  INFO        09:45  ORB closes → watch for breakout
+2026-06-28 23:10:26  INFO        15:55  Close all positions
+2026-06-28 23:10:26  INFO        17:00  After-hours analysis
+2026-06-28 23:10:26  INFO      Bot running — waiting for next scheduled event …
+2026-06-28 23:11:11  INFO      ╔══════════════════════════════════════════╗
+2026-06-28 23:11:11  INFO      ║   SPY ORB Trading Bot  —  paper mode     ║
+2026-06-28 23:11:11  INFO      ╚══════════════════════════════════════════╝
+2026-06-28 23:11:11  INFO      Alpaca connected | account: a354027c-1987-41e9-8015-2700e43cb5d6
+2026-06-28 23:11:11  INFO      Supabase connected ✅
+2026-06-28 23:11:11  INFO      Account equity: $100,000.00  |  Buying power: $400,000.00
+2026-06-28 23:11:11  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-28 23:11:12  INFO      Fetched 206 daily bars for SPY
+2026-06-28 23:11:12  INFO      ───────────────────────────────────────────────────────
+2026-06-28 23:11:12  INFO        PRE-MARKET ANALYSIS  |  SPY  |  2026-06-26
+2026-06-28 23:11:12  INFO      ───────────────────────────────────────────────────────
+2026-06-28 23:11:12  INFO        Close:        729.35
+2026-06-28 23:11:12  INFO        EMA20:        738.55   EMA50:      728.31   EMA200:     691.48
+2026-06-28 23:11:12  INFO        RSI:           44.26   MACD-H:    -2.6058   ATR:         10.41
+2026-06-28 23:11:12  INFO        BB:           721.98 — 762.44
+2026-06-28 23:11:12  INFO        Support:      716.58   Resist:     758.45
+2026-06-28 23:11:12  INFO        Bull score: -1/5
+2026-06-28 23:11:12  INFO          ✅ Price above EMA200 (uptrend)
+2026-06-28 23:11:12  INFO          ✅ EMA20 > EMA50 (short-term bullish)
+2026-06-28 23:11:12  INFO          🔴 RSI 44.3 — bearish momentum
+2026-06-28 23:11:12  INFO          🔴 MACD histogram expanding bearish
+2026-06-28 23:11:12  INFO          🔴 Price in lower BB (18%)
+2026-06-28 23:11:12  INFO        ➤ BIAS: FLAT
+2026-06-28 23:11:12  INFO      ───────────────────────────────────────────────────────
+2026-06-28 23:11:12  INFO      HTTP Request: POST https://mjtwpiwdvhcoegjnpcjv.supabase.co/rest/v1/bot_analyses "HTTP/2 401 Unauthorized"
+2026-06-28 23:11:12  ERROR     Supabase log_analysis failed: {'message': 'permission denied for table bot_analyses', 'code': '42501', 'hint': 'Grant the required privileges to the current role with: GRANT SELECT, INSERT ON public.bot_analyses TO anon;', 'details': None}
+2026-06-28 23:11:12  INFO      Pre-market done | Bias for today: FLAT
+2026-06-28 23:11:12  INFO      Schedule loaded:
+2026-06-28 23:11:12  INFO        08:00  Pre-market analysis
+2026-06-28 23:11:12  INFO        09:30  Market open / ORB starts
+2026-06-28 23:11:12  INFO        09:45  ORB closes → watch for breakout
+2026-06-28 23:11:12  INFO        15:55  Close all positions
+2026-06-28 23:11:12  INFO        17:00  After-hours analysis
+2026-06-28 23:11:12  INFO      Bot running — waiting for next scheduled event …
+2026-06-28 23:12:35  INFO      ╔══════════════════════════════════════════╗
+2026-06-28 23:12:35  INFO      ║   SPY ORB Trading Bot  —  paper mode     ║
+2026-06-28 23:12:35  INFO      ╚══════════════════════════════════════════╝
+2026-06-28 23:12:35  INFO      Alpaca connected | account: a354027c-1987-41e9-8015-2700e43cb5d6
+2026-06-28 23:12:36  INFO      Supabase connected ✅
+2026-06-28 23:12:36  INFO      Account equity: $100,000.00  |  Buying power: $400,000.00
+2026-06-28 23:12:36  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-28 23:12:36  INFO      Fetched 206 daily bars for SPY
+2026-06-28 23:12:36  INFO      ───────────────────────────────────────────────────────
+2026-06-28 23:12:36  INFO        PRE-MARKET ANALYSIS  |  SPY  |  2026-06-26
+2026-06-28 23:12:36  INFO      ───────────────────────────────────────────────────────
+2026-06-28 23:12:36  INFO        Close:        729.35
+2026-06-28 23:12:36  INFO        EMA20:        738.55   EMA50:      728.31   EMA200:     691.48
+2026-06-28 23:12:36  INFO        RSI:           44.26   MACD-H:    -2.6058   ATR:         10.41
+2026-06-28 23:12:36  INFO        BB:           721.98 — 762.44
+2026-06-28 23:12:36  INFO        Support:      716.58   Resist:     758.45
+2026-06-28 23:12:36  INFO        Bull score: -1/5
+2026-06-28 23:12:36  INFO          ✅ Price above EMA200 (uptrend)
+2026-06-28 23:12:36  INFO          ✅ EMA20 > EMA50 (short-term bullish)
+2026-06-28 23:12:36  INFO          🔴 RSI 44.3 — bearish momentum
+2026-06-28 23:12:36  INFO          🔴 MACD histogram expanding bearish
+2026-06-28 23:12:36  INFO          🔴 Price in lower BB (18%)
+2026-06-28 23:12:36  INFO        ➤ BIAS: FLAT
+2026-06-28 23:12:36  INFO      ───────────────────────────────────────────────────────
+2026-06-28 23:12:37  INFO      HTTP Request: POST https://mjtwpiwdvhcoegjnpcjv.supabase.co/rest/v1/bot_analyses "HTTP/2 201 Created"
+2026-06-28 23:12:37  INFO      Supabase: analys sparad (SPY FLAT)
+2026-06-28 23:12:37  INFO      Pre-market done | Bias for today: FLAT
+2026-06-28 23:12:37  INFO      Schedule loaded:
+2026-06-28 23:12:37  INFO        08:00  Pre-market analysis
+2026-06-28 23:12:37  INFO        09:30  Market open / ORB starts
+2026-06-28 23:12:37  INFO        09:45  ORB closes → watch for breakout
+2026-06-28 23:12:37  INFO        15:55  Close all positions
+2026-06-28 23:12:37  INFO        17:00  After-hours analysis
+2026-06-28 23:12:37  INFO      Bot running — waiting for next scheduled event …
+2026-06-29 10:18:16  INFO      ╔══════════════════════════════════════════╗
+2026-06-29 10:18:16  INFO      ║   SPY ORB Trading Bot  —  paper mode     ║
+2026-06-29 10:18:16  INFO      ╚══════════════════════════════════════════╝
+2026-06-29 10:18:16  INFO      Alpaca connected | account: a354027c-1987-41e9-8015-2700e43cb5d6
+2026-06-29 10:18:17  INFO      Supabase connected ✅
+2026-06-29 10:18:17  INFO      Account equity: $100,000.00  |  Buying power: $400,000.00
+2026-06-29 10:18:17  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-29 10:18:17  INFO      Fetched 206 daily bars for SPY
+2026-06-29 10:18:17  INFO      ───────────────────────────────────────────────────────
+2026-06-29 10:18:17  INFO        PRE-MARKET ANALYSIS  |  SPY  |  2026-06-26
+2026-06-29 10:18:17  INFO      ───────────────────────────────────────────────────────
+2026-06-29 10:18:17  INFO        Close:        729.35
+2026-06-29 10:18:17  INFO        EMA20:        738.55   EMA50:      728.31   EMA200:     691.48
+2026-06-29 10:18:17  INFO        RSI:           44.26   MACD-H:    -2.6058   ATR:         10.41
+2026-06-29 10:18:17  INFO        BB:           721.98 — 762.44
+2026-06-29 10:18:17  INFO        Support:      716.58   Resist:     758.45
+2026-06-29 10:18:17  INFO        Bull score: -1/5
+2026-06-29 10:18:17  INFO          ✅ Price above EMA200 (uptrend)
+2026-06-29 10:18:17  INFO          ✅ EMA20 > EMA50 (short-term bullish)
+2026-06-29 10:18:17  INFO          🔴 RSI 44.3 — bearish momentum
+2026-06-29 10:18:17  INFO          🔴 MACD histogram expanding bearish
+2026-06-29 10:18:17  INFO          🔴 Price in lower BB (18%)
+2026-06-29 10:18:17  INFO        ➤ BIAS: FLAT
+2026-06-29 10:18:17  INFO      ───────────────────────────────────────────────────────
+2026-06-29 10:18:18  INFO      HTTP Request: POST https://mjtwpiwdvhcoegjnpcjv.supabase.co/rest/v1/bot_analyses "HTTP/2 201 Created"
+2026-06-29 10:18:18  INFO      Supabase: analys sparad (SPY FLAT)
+2026-06-29 10:18:18  INFO      Pre-market done | Bias for today: FLAT
+2026-06-29 10:18:18  INFO      Schedule loaded:
+2026-06-29 10:18:18  INFO        08:00  Pre-market analysis
+2026-06-29 10:18:18  INFO        09:30  Market open / ORB starts
+2026-06-29 10:18:18  INFO        09:45  ORB closes → watch for breakout
+2026-06-29 10:18:18  INFO        15:55  Close all positions
+2026-06-29 10:18:18  INFO        17:00  After-hours analysis
+2026-06-29 10:18:18  INFO      Bot running — waiting for next scheduled event …
+2026-06-29 10:23:42  INFO      ╔══════════════════════════════════════════╗
+2026-06-29 10:23:42  INFO      ║   SPY ORB Trading Bot  —  paper mode     ║
+2026-06-29 10:23:42  INFO      ╚══════════════════════════════════════════╝
+2026-06-29 10:23:43  INFO      Alpaca connected | account: a354027c-1987-41e9-8015-2700e43cb5d6
+2026-06-29 10:23:43  INFO      Supabase connected ✅
+2026-06-29 10:23:43  INFO      Account equity: $100,000.00  |  Buying power: $400,000.00
+2026-06-29 10:23:43  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-29 10:23:44  INFO      Fetched 206 daily bars for SPY
+2026-06-29 10:23:44  INFO      ───────────────────────────────────────────────────────
+2026-06-29 10:23:44  INFO        PRE-MARKET ANALYSIS  |  SPY  |  2026-06-26
+2026-06-29 10:23:44  INFO      ───────────────────────────────────────────────────────
+2026-06-29 10:23:44  INFO        Close:        729.35
+2026-06-29 10:23:44  INFO        EMA20:        738.55   EMA50:      728.31   EMA200:     691.48
+2026-06-29 10:23:44  INFO        RSI:           44.26   MACD-H:    -2.6058   ATR:         10.41
+2026-06-29 10:23:44  INFO        BB:           721.98 — 762.44
+2026-06-29 10:23:44  INFO        Support:      716.58   Resist:     758.45
+2026-06-29 10:23:44  INFO        Bull score: -1/5
+2026-06-29 10:23:44  INFO          ✅ Price above EMA200 (uptrend)
+2026-06-29 10:23:44  INFO          ✅ EMA20 > EMA50 (short-term bullish)
+2026-06-29 10:23:44  INFO          🔴 RSI 44.3 — bearish momentum
+2026-06-29 10:23:44  INFO          🔴 MACD histogram expanding bearish
+2026-06-29 10:23:44  INFO          🔴 Price in lower BB (18%)
+2026-06-29 10:23:44  INFO        ➤ BIAS: FLAT
+2026-06-29 10:23:44  INFO      ───────────────────────────────────────────────────────
+2026-06-29 10:23:44  INFO      HTTP Request: POST https://mjtwpiwdvhcoegjnpcjv.supabase.co/rest/v1/bot_analyses "HTTP/2 201 Created"
+2026-06-29 10:23:44  INFO      Supabase: analys sparad (SPY FLAT)
+2026-06-29 10:23:44  INFO      Pre-market done | Bias for today: FLAT
+2026-06-29 10:23:44  INFO      Schedule loaded:
+2026-06-29 10:23:44  INFO        08:00  Pre-market analysis
+2026-06-29 10:23:44  INFO        09:30  Market open / ORB starts
+2026-06-29 10:23:44  INFO        09:45  ORB closes → watch for breakout
+2026-06-29 10:23:44  INFO        15:55  Close all positions
+2026-06-29 10:23:44  INFO        17:00  After-hours analysis
+2026-06-29 10:23:44  INFO      Bot running — waiting for next scheduled event …
+2026-06-29 15:55:00  INFO      === END OF DAY — closing all positions ===
+2026-06-29 15:55:01  INFO      All open orders cancelled.
+2026-06-29 15:55:01  INFO      All positions closed.
+2026-06-29 15:55:01  INFO      Strategy reset for new trading day.
+2026-06-29 17:00:00  INFO      === AFTER-HOURS ANALYSIS ===
+2026-06-29 17:00:00  INFO      Fetched 207 daily bars for SPY
+2026-06-29 17:00:00  INFO      ───────────────────────────────────────────────────────
+2026-06-29 17:00:00  INFO        PRE-MARKET ANALYSIS  |  SPY  |  2026-06-29
+2026-06-29 17:00:00  INFO      ───────────────────────────────────────────────────────
+2026-06-29 17:00:00  INFO        Close:        737.36
+2026-06-29 17:00:00  INFO        EMA20:        738.44   EMA50:      728.67   EMA200:     691.94
+2026-06-29 17:00:00  INFO        RSI:           50.10   MACD-H:    -2.1357   ATR:         10.42
+2026-06-29 17:00:00  INFO        BB:           721.87 — 760.85
+2026-06-29 17:00:00  INFO        Support:      716.58   Resist:     758.45
+2026-06-29 17:00:00  INFO        Bull score: +2/5
+2026-06-29 17:00:00  INFO          ✅ Price above EMA200 (uptrend)
+2026-06-29 17:00:00  INFO          ✅ EMA20 > EMA50 (short-term bullish)
+2026-06-29 17:00:00  INFO          ⚪ RSI 50.1 — neutral zone
+2026-06-29 17:00:00  INFO          ⚪ MACD mixed signal
+2026-06-29 17:00:00  INFO          ⚪ Price mid-BB (40%)
+2026-06-29 17:00:00  INFO        ➤ BIAS: LONG
+2026-06-29 17:00:00  INFO      ───────────────────────────────────────────────────────
+2026-06-29 17:00:00  INFO      Tomorrow's pre-bias (provisional): LONG | score=+2
+2026-06-30 08:00:00  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-30 08:00:00  INFO      Fetched 206 daily bars for SPY
+2026-06-30 08:00:00  INFO      ───────────────────────────────────────────────────────
+2026-06-30 08:00:00  INFO        PRE-MARKET ANALYSIS  |  SPY  |  2026-06-29
+2026-06-30 08:00:00  INFO      ───────────────────────────────────────────────────────
+2026-06-30 08:00:00  INFO        Close:        740.86
+2026-06-30 08:00:00  INFO        EMA20:        738.77   EMA50:      728.81   EMA200:     692.38
+2026-06-30 08:00:00  INFO        RSI:           52.29   MACD-H:    -1.9124   ATR:         10.54
+2026-06-30 08:00:00  INFO        BB:           722.13 — 760.94
+2026-06-30 08:00:00  INFO        Support:      716.58   Resist:     758.45
+2026-06-30 08:00:00  INFO        Bull score: +2/5
+2026-06-30 08:00:00  INFO          ✅ Price above EMA200 (uptrend)
+2026-06-30 08:00:00  INFO          ✅ EMA20 > EMA50 (short-term bullish)
+2026-06-30 08:00:00  INFO          ⚪ RSI 52.3 — neutral zone
+2026-06-30 08:00:00  INFO          ⚪ MACD mixed signal
+2026-06-30 08:00:00  INFO          ⚪ Price mid-BB (48%)
+2026-06-30 08:00:00  INFO        ➤ BIAS: LONG
+2026-06-30 08:00:00  INFO      ───────────────────────────────────────────────────────
+2026-06-30 08:00:01  INFO      HTTP Request: POST https://mjtwpiwdvhcoegjnpcjv.supabase.co/rest/v1/bot_analyses "HTTP/2 201 Created"
+2026-06-30 08:00:01  INFO      Supabase: analys sparad (SPY LONG)
+2026-06-30 08:00:01  INFO      Pre-market done | Bias for today: LONG
+2026-06-30 09:30:00  INFO      === MARKET OPEN — collecting opening range ===
+2026-06-30 09:45:00  INFO      === ORB WINDOW CLOSED — building range ===
+2026-06-30 09:45:00  ERROR     build_range failed: Cannot convert tz-naive timestamps, use tz_localize to localize
+Traceback (most recent call last):
+  File "C:\Users\swema\Claude\Projects\Bot Researcher\stock_bot\bot.py", line 96, in job_orb_end
+    strategy.build_range()
+    ~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\swema\Claude\Projects\Bot Researcher\stock_bot\strategy.py", line 70, in build_range
+    bars = self.broker.intraday_bars(SYMBOL, lookback_min=ORB_MINUTES + 5)
+  File "C:\Users\swema\Claude\Projects\Bot Researcher\stock_bot\broker.py", line 72, in intraday_bars
+    bars.index = pd.to_datetime(bars.index).tz_convert(ET)
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\swema\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pandas\core\indexes\datetimes.py", line 395, in tz_convert
+    arr = self._data.tz_convert(tz)
+  File "C:\Users\swema\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pandas\core\arrays\datetimes.py", line 931, in tz_convert
+    raise TypeError(
+        "Cannot convert tz-naive timestamps, use tz_localize to localize"
+    )
+TypeError: Cannot convert tz-naive timestamps, use tz_localize to localize
+2026-06-30 12:22:00  INFO      ╔══════════════════════════════════════════╗
+2026-06-30 12:22:00  INFO      ║   SPY ORB Trading Bot  —  paper mode     ║
+2026-06-30 12:22:00  INFO      ╚══════════════════════════════════════════╝
+2026-06-30 12:22:01  INFO      Alpaca connected | account: a354027c-1987-41e9-8015-2700e43cb5d6
+2026-06-30 12:22:01  INFO      Supabase connected ✅
+2026-06-30 12:22:01  INFO      Account equity: $100,000.00  |  Buying power: $400,000.00
+2026-06-30 12:22:01  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-30 12:22:01  INFO      Fetched 206 daily bars for SPY
+2026-06-30 12:22:01  INFO      ───────────────────────────────────────────────────────
+2026-06-30 12:22:01  INFO        PRE-MARKET ANALYSIS  |  SPY  |  2026-06-29
+2026-06-30 12:22:01  INFO      ───────────────────────────────────────────────────────
+2026-06-30 12:22:01  INFO        Close:        740.86
+2026-06-30 12:22:01  INFO        EMA20:        738.77   EMA50:      728.81   EMA200:     692.38
+2026-06-30 12:22:01  INFO        RSI:           52.29   MACD-H:    -1.9124   ATR:         10.54
+2026-06-30 12:22:01  INFO        BB:           722.13 — 760.94
+2026-06-30 12:22:01  INFO        Support:      716.58   Resist:     758.45
+2026-06-30 12:22:01  INFO        Bull score: +2/5
+2026-06-30 12:22:01  INFO          ✅ Price above EMA200 (uptrend)
+2026-06-30 12:22:01  INFO          ✅ EMA20 > EMA50 (short-term bullish)
+2026-06-30 12:22:01  INFO          ⚪ RSI 52.3 — neutral zone
+2026-06-30 12:22:01  INFO          ⚪ MACD mixed signal
+2026-06-30 12:22:01  INFO          ⚪ Price mid-BB (48%)
+2026-06-30 12:22:01  INFO        ➤ BIAS: LONG
+2026-06-30 12:22:01  INFO      ───────────────────────────────────────────────────────
+2026-06-30 12:22:02  INFO      HTTP Request: POST https://mjtwpiwdvhcoegjnpcjv.supabase.co/rest/v1/bot_analyses "HTTP/2 201 Created"
+2026-06-30 12:22:02  INFO      Supabase: analys sparad (SPY LONG)
+2026-06-30 12:22:02  INFO      Pre-market done | Bias for today: LONG
+2026-06-30 12:22:02  INFO      Schedule loaded (local time → ET):
+2026-06-30 12:22:02  INFO        14:00  Pre-market analysis  (08:00 ET)
+2026-06-30 12:22:02  INFO        15:30  Market open / ORB starts  (09:30 ET)
+2026-06-30 12:22:02  INFO        15:45  ORB closes → watch for breakout  (09:45 ET)
+2026-06-30 12:22:02  INFO        21:55  Close all positions  (15:55 ET)
+2026-06-30 12:22:02  INFO        23:00  After-hours analysis  (17:00 ET)
+2026-06-30 12:22:02  INFO      Bot running — waiting for next scheduled event …
+2026-06-30 12:22:43  INFO      ╔══════════════════════════════════════════╗
+2026-06-30 12:22:43  INFO      ║   SPY ORB Trading Bot  —  paper mode     ║
+2026-06-30 12:22:43  INFO      ╚══════════════════════════════════════════╝
+2026-06-30 12:22:43  INFO      Alpaca connected | account: a354027c-1987-41e9-8015-2700e43cb5d6
+2026-06-30 12:22:44  INFO      Supabase connected ✅
+2026-06-30 12:22:44  INFO      Account equity: $100,000.00  |  Buying power: $400,000.00
+2026-06-30 12:22:44  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-30 12:22:44  INFO      Fetched 206 daily bars for SPY
+2026-06-30 12:22:44  INFO      ───────────────────────────────────────────────────────
+2026-06-30 12:22:44  INFO        PRE-MARKET ANALYSIS  |  SPY  |  2026-06-29
+2026-06-30 12:22:44  INFO      ───────────────────────────────────────────────────────
+2026-06-30 12:22:44  INFO        Close:        740.86
+2026-06-30 12:22:44  INFO        EMA20:        738.77   EMA50:      728.81   EMA200:     692.38
+2026-06-30 12:22:44  INFO        RSI:           52.29   MACD-H:    -1.9124   ATR:         10.54
+2026-06-30 12:22:44  INFO        BB:           722.13 — 760.94
+2026-06-30 12:22:44  INFO        Support:      716.58   Resist:     758.45
+2026-06-30 12:22:44  INFO        Bull score: +2/5
+2026-06-30 12:22:44  INFO          ✅ Price above EMA200 (uptrend)
+2026-06-30 12:22:44  INFO          ✅ EMA20 > EMA50 (short-term bullish)
+2026-06-30 12:22:44  INFO          ⚪ RSI 52.3 — neutral zone
+2026-06-30 12:22:44  INFO          ⚪ MACD mixed signal
+2026-06-30 12:22:44  INFO          ⚪ Price mid-BB (48%)
+2026-06-30 12:22:44  INFO        ➤ BIAS: LONG
+2026-06-30 12:22:44  INFO      ───────────────────────────────────────────────────────
+2026-06-30 12:22:45  INFO      HTTP Request: POST https://mjtwpiwdvhcoegjnpcjv.supabase.co/rest/v1/bot_analyses "HTTP/2 201 Created"
+2026-06-30 12:22:45  INFO      Supabase: analys sparad (SPY LONG)
+2026-06-30 12:22:45  INFO      Pre-market done | Bias for today: LONG
+2026-06-30 12:22:45  INFO      Schedule loaded (local time → ET):
+2026-06-30 12:22:45  INFO        14:00  Pre-market analysis  (08:00 ET)
+2026-06-30 12:22:45  INFO        15:30  Market open / ORB starts  (09:30 ET)
+2026-06-30 12:22:45  INFO        15:45  ORB closes → watch for breakout  (09:45 ET)
+2026-06-30 12:22:45  INFO        21:55  Close all positions  (15:55 ET)
+2026-06-30 12:22:45  INFO        23:00  After-hours analysis  (17:00 ET)
+2026-06-30 12:22:45  INFO      Bot running — waiting for next scheduled event …
+2026-06-30 14:00:00  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-30 14:00:01  INFO      Fetched 206 daily bars for SPY
+2026-06-30 14:00:01  INFO      ───────────────────────────────────────────────────────
+2026-06-30 14:00:01  INFO        PRE-MARKET ANALYSIS  |  SPY  |  2026-06-29
+2026-06-30 14:00:01  INFO      ───────────────────────────────────────────────────────
+2026-06-30 14:00:01  INFO        Close:        740.86
+2026-06-30 14:00:01  INFO        EMA20:        738.77   EMA50:      728.81   EMA200:     692.38
+2026-06-30 14:00:01  INFO        RSI:           52.29   MACD-H:    -1.9124   ATR:         10.54
+2026-06-30 14:00:01  INFO        BB:           722.13 — 760.94
+2026-06-30 14:00:01  INFO        Support:      716.58   Resist:     758.45
+2026-06-30 14:00:01  INFO        Bull score: +2/5
+2026-06-30 14:00:01  INFO          ✅ Price above EMA200 (uptrend)
+2026-06-30 14:00:01  INFO          ✅ EMA20 > EMA50 (short-term bullish)
+2026-06-30 14:00:01  INFO          ⚪ RSI 52.3 — neutral zone
+2026-06-30 14:00:01  INFO          ⚪ MACD mixed signal
+2026-06-30 14:00:01  INFO          ⚪ Price mid-BB (48%)
+2026-06-30 14:00:01  INFO        ➤ BIAS: LONG
+2026-06-30 14:00:01  INFO      ───────────────────────────────────────────────────────
+2026-06-30 14:00:02  INFO      HTTP Request: POST https://mjtwpiwdvhcoegjnpcjv.supabase.co/rest/v1/bot_analyses "HTTP/2 201 Created"
+2026-06-30 14:00:02  INFO      Supabase: analys sparad (SPY LONG)
+2026-06-30 14:00:02  INFO      Pre-market done | Bias for today: LONG
+2026-06-30 15:30:00  INFO      === MARKET OPEN — collecting opening range ===
+2026-06-30 15:45:00  INFO      === ORB WINDOW CLOSED — building range ===
+2026-06-30 15:45:01  INFO      ORB built | High=742.29  Low=740.90  Size=1.40  Bias=LONG
+2026-06-30 15:45:01  INFO      ORB built — monitoring for breakout every 60 s
+2026-06-30 15:51:53  INFO      ENTERING BUY | qty=526 entry≈742.80 | SL=740.90 | TP=746.60 | risk=$1000
+2026-06-30 15:51:53  INFO      BRACKET ORDER → BUY 526x SPY | TP=746.60  SL=740.90
+2026-06-30 15:51:54  INFO      HTTP Request: POST https://mjtwpiwdvhcoegjnpcjv.supabase.co/rest/v1/bot_trades "HTTP/2 201 Created"
+2026-06-30 15:51:54  INFO      Supabase: trade öppnad (id=1)
+2026-06-30 15:51:55  INFO      HTTP Request: POST https://mjtwpiwdvhcoegjnpcjv.supabase.co/rest/v1/bot_signals "HTTP/2 201 Created"
+2026-06-30 15:51:55  INFO      Supabase: signal sparad (BUY @ 742.8)
+2026-06-30 15:52:55  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +210.35 (+0.05%)
+2026-06-30 15:53:55  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +126.24 (+0.03%)
+2026-06-30 15:54:55  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +94.68 (+0.02%)
+2026-06-30 15:55:55  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +362.94 (+0.09%)
+2026-06-30 15:56:55  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +315.60 (+0.08%)
+2026-06-30 15:57:56  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +263.00 (+0.07%)
+2026-06-30 15:58:56  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +373.46 (+0.10%)
+2026-06-30 15:59:56  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +420.80 (+0.11%)
+2026-06-30 16:00:56  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +131.50 (+0.03%)
+2026-06-30 16:01:56  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +305.08 (+0.08%)
+2026-06-30 16:02:56  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +520.74 (+0.13%)
+2026-06-30 16:03:56  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +710.10 (+0.18%)
+2026-06-30 16:04:57  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +778.48 (+0.20%)
+2026-06-30 16:05:57  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +602.27 (+0.15%)
+2026-06-30 16:06:57  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +499.70 (+0.13%)
+2026-06-30 16:07:57  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +373.46 (+0.10%)
+2026-06-30 16:08:57  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +347.16 (+0.09%)
+2026-06-30 16:09:57  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +305.19 (+0.08%)
+2026-06-30 16:10:57  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +196.57 (+0.05%)
+2026-06-30 16:11:58  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +368.20 (+0.09%)
+2026-06-30 16:12:58  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +247.22 (+0.06%)
+2026-06-30 16:13:58  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +294.56 (+0.07%)
+2026-06-30 16:14:58  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +315.60 (+0.08%)
+2026-06-30 16:15:58  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +347.16 (+0.09%)
+2026-06-30 16:16:58  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +370.62 (+0.10%)
+2026-06-30 16:17:59  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +336.64 (+0.09%)
+2026-06-30 16:18:59  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +289.30 (+0.07%)
+2026-06-30 16:19:59  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +294.56 (+0.07%)
+2026-06-30 16:20:59  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +373.46 (+0.10%)
+2026-06-30 16:21:59  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +426.06 (+0.11%)
+2026-06-30 16:23:00  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +599.64 (+0.15%)
+2026-06-30 16:24:00  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +741.66 (+0.19%)
+2026-06-30 16:25:00  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +710.10 (+0.18%)
+2026-06-30 16:26:01  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +615.42 (+0.16%)
+2026-06-30 16:27:01  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +704.89 (+0.18%)
+2026-06-30 16:28:01  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +794.26 (+0.20%)
+2026-06-30 16:29:01  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +778.53 (+0.20%)
+2026-06-30 16:30:02  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +762.70 (+0.19%)
+2026-06-30 16:31:02  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +980.99 (+0.25%)
+2026-06-30 16:32:02  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +1130.90 (+0.29%)
+2026-06-30 16:33:02  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +1009.92 (+0.26%)
+2026-06-30 16:34:02  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +1052.00 (+0.27%)
+2026-06-30 16:35:03  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +1207.17 (+0.31%)
+2026-06-30 16:36:03  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +1067.78 (+0.27%)
+2026-06-30 16:37:03  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +1115.12 (+0.29%)
+2026-06-30 16:38:03  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +1025.70 (+0.26%)
+2026-06-30 16:39:03  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +773.22 (+0.20%)
+2026-06-30 16:40:04  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +810.04 (+0.21%)
+2026-06-30 16:41:04  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +1004.66 (+0.26%)
+2026-06-30 16:42:04  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +657.50 (+0.17%)
+2026-06-30 16:43:04  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +696.95 (+0.18%)
+2026-06-30 16:44:04  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +820.56 (+0.21%)
+2026-06-30 16:45:04  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +936.28 (+0.24%)
+2026-06-30 16:46:05  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +846.86 (+0.22%)
+2026-06-30 16:47:05  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +573.34 (+0.15%)
+2026-06-30 16:48:05  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +526.00 (+0.14%)
+2026-06-30 16:49:05  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +441.84 (+0.11%)
+2026-06-30 16:50:06  INFO      Position | LONG 526x SPY @ 743.00 | P&L: +457.62 (+0.12%)
+2026-06-30 16:51:03  INFO      ╔══════════════════════════════════════════╗
+2026-06-30 16:51:03  INFO      ║   SPY ORB Trading Bot  —  paper mode     ║
+2026-06-30 16:51:03  INFO      ╚══════════════════════════════════════════╝
+2026-06-30 16:51:04  INFO      Alpaca connected | account: a354027c-1987-41e9-8015-2700e43cb5d6
+2026-06-30 16:51:04  INFO      Supabase connected ✅
+2026-06-30 16:51:04  INFO      Account equity: $100,615.42  |  Buying power: $402,461.68
+2026-06-30 16:51:04  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-30 16:51:04  INFO      Fetched 207 daily bars for SPY
+2026-06-30 16:51:04  INFO      ───────────────────────────────────────────────────────
+2026-06-30 16:51:04  INFO        PRE-MARKET ANALYSIS  |  SPY  |  2026-06-30
+2026-06-30 16:51:04  INFO      ───────────────────────────────────────────────────────
+2026-06-30 16:51:04  INFO        Close:        744.13
+2026-06-30 16:51:04  INFO        EMA20:        739.28   EMA50:      729.41   EMA200:     692.89
+2026-06-30 16:51:04  INFO        RSI:           54.30   MACD-H:    -1.1914   ATR:         10.11
+2026-06-30 16:51:04  INFO        BB:           722.77 — 759.06
+2026-06-30 16:51:04  INFO        Support:      716.58   Resist:     758.45
+2026-06-30 16:51:04  INFO        Bull score: +2/5
+2026-06-30 16:51:04  INFO          ✅ Price above EMA200 (uptrend)
+2026-06-30 16:51:04  INFO          ✅ EMA20 > EMA50 (short-term bullish)
+2026-06-30 16:51:04  INFO          ⚪ RSI 54.3 — neutral zone
+2026-06-30 16:51:04  INFO          ⚪ MACD mixed signal
+2026-06-30 16:51:04  INFO          ⚪ Price mid-BB (59%)
+2026-06-30 16:51:04  INFO        ➤ BIAS: LONG
+2026-06-30 16:51:04  INFO      ───────────────────────────────────────────────────────
+2026-06-30 16:51:05  INFO      HTTP Request: POST https://mjtwpiwdvhcoegjnpcjv.supabase.co/rest/v1/bot_analyses "HTTP/2 201 Created"
+2026-06-30 16:51:05  INFO      Supabase: analys sparad (SPY LONG)
+2026-06-30 16:51:05  INFO      Pre-market done | Bias for today: LONG
+2026-06-30 16:51:05  INFO      Schedule loaded (local time → ET):
+2026-06-30 16:51:05  INFO        14:00  Pre-market analysis  (08:00 ET)
+2026-06-30 16:51:05  INFO        15:30  Market open / ORB starts  (09:30 ET)
+2026-06-30 16:51:05  INFO        15:45  ORB closes → watch for breakout  (09:45 ET)
+2026-06-30 16:51:05  INFO        21:55  Close all positions  (15:55 ET)
+2026-06-30 16:51:05  INFO        23:00  After-hours analysis  (17:00 ET)
+2026-06-30 16:51:05  INFO      Bot running — waiting for next scheduled event …
+2026-06-30 16:55:32  INFO      ╔══════════════════════════════════════════╗
+2026-06-30 16:55:32  INFO      ║   SPY ORB Trading Bot  —  paper mode     ║
+2026-06-30 16:55:32  INFO      ╚══════════════════════════════════════════╝
+2026-06-30 16:55:32  INFO      Alpaca connected | account: a354027c-1987-41e9-8015-2700e43cb5d6
+2026-06-30 16:55:33  INFO      Supabase connected ✅
+2026-06-30 16:55:33  INFO      Account equity: $100,615.42  |  Buying power: $402,461.68
+2026-06-30 16:55:33  INFO      === PRE-MARKET ANALYSIS STARTING ===
+2026-06-30 16:55:33  INFO      Fetched 207 daily bars for SPY
+2026-06-30 16:55:33  INFO      ───────────────────────────────────────────────────────
+2026-06-30 16:55:33  INFO        PRE-MARKET ANALYSIS  |  SPY  |  2026-06-30
+2026-06-30 16:55:33  INFO      ───────────────────────────────────────────────────────
+2026-06-30 16:55:33  INFO        Close:        743.37
+2026-06-30 16:55:33  INFO        EMA20:        739.21   EMA50:      729.38   EMA200:     692.88
+2026-06-30 16:55:33  INFO        RSI:           53.85   MACD-H:    -1.2399   ATR:         10.11
+2026-06-30 16:55:33  INFO        BB:           722.76 — 759.00
+2026-06-30 16:55:33  INFO        Support:      716.58   Resist:     758.45
+2026-06-30 16:55:33  INFO        Bull score: +2/5
+2026-06-30 16:55:33  INFO          ✅ Price above EMA200 (uptrend)
+2026-06-30 16:55:33  INFO          ✅ EMA20 > EMA50 (short-term bullish)
+2026-06-30 16:55:33  INFO          ⚪ RSI 53.8 — neutral zone
+2026-06-30 16:55:33  INFO          ⚪ MACD mixed signal
+2026-06-30 16:55:33  INFO          ⚪ Price mid-BB (57%)
+2026-06-30 16:55:33  INFO        ➤ BIAS: LONG
+2026-06-30 16:55:33  INFO      ───────────────────────────────────────────────────────
+2026-06-30 16:55:33  INFO      HTTP Request: POST https://mjtwpiwdvhcoegjnpcjv.supabase.co/rest/v1/bot_analyses "HTTP/2 201 Created"
+2026-06-30 16:55:33  INFO      Supabase: analys sparad (SPY LONG)
+2026-06-30 16:55:33  INFO      Pre-market done | Bias for today: LONG
+2026-06-30 16:55:33  INFO      Schedule loaded (local time → ET):
+2026-06-30 16:55:33  INFO        14:00  Pre-market analysis  (08:00 ET)
+2026-06-30 16:55:33  INFO        15:30  Market open / ORB starts  (09:30 ET)
+2026-06-30 16:55:33  INFO        15:45  ORB closes → watch for breakout  (09:45 ET)
+2026-06-30 16:55:33  INFO        21:55  Close all positions  (15:55 ET)
+2026-06-30 16:55:33  INFO        23:00  After-hours analysis  (17:00 ET)
+2026-06-30 16:55:33  INFO      Bot running — waiting for next scheduled event …
