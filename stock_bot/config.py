@@ -23,8 +23,8 @@ SYMBOL = "SPY"          # S&P 500 ETF  (change to "QQQ" for Nasdaq)
 PRE_MARKET_ANALYSIS_TIME = "08:00"   # full overnight analysis
 ORB_START_TIME           = "09:30"   # market open — begin collecting range
 ORB_END_TIME             = "09:45"   # first 15 min = opening range
-MONITOR_UNTIL            = "15:55"   # stop new entries after this
-CLOSE_ALL_TIME           = "15:55"   # force-close all positions
+MONITOR_UNTIL            = "14:55"   # stop new entries after this
+CLOSE_ALL_TIME           = "15:00"   # force-close all positions (1 hour before close)
 AFTER_HOURS_ANALYSIS     = "17:00"   # evening run for tomorrow prep
 
 ORB_MINUTES = 15   # opening range window in minutes
