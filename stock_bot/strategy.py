@@ -175,19 +175,19 @@ class OrbStrategy:
 
             profit_pts = self.highest_seen - entry
 
-            # Phase 1: break-even
-            if self.stop_phase == "initial" and profit_pts >= risk_pts:
-                new_stop = entry + 0.05   # tiny buffer above entry
+            # Phase 1: break-even at 0.5R
+            if self.stop_phase == "initial" and profit_pts >= risk_pts * 0.5:
+                new_stop = entry + 0.05
                 self._apply_stop(new_stop, "breakeven")
 
-            # Phase 2: trailing
-            elif self.stop_phase in ("initial", "breakeven") and profit_pts >= risk_pts * 1.5:
-                new_stop = self.highest_seen - atr * 0.5
+            # Phase 2: trailing at 1R
+            elif self.stop_phase in ("initial", "breakeven") and profit_pts >= risk_pts:
+                new_stop = self.highest_seen - atr * 0.3
                 if new_stop > self.current_stop + 0.10:
                     self._apply_stop(new_stop, "trailing")
 
             elif self.stop_phase == "trailing":
-                new_stop = self.highest_seen - atr * 0.5
+                new_stop = self.highest_seen - atr * 0.3
                 if new_stop > self.current_stop + 0.10:
                     self._apply_stop(new_stop, "trailing")
 
@@ -197,17 +197,17 @@ class OrbStrategy:
 
             profit_pts = entry - self.lowest_seen
 
-            if self.stop_phase == "initial" and profit_pts >= risk_pts:
+            if self.stop_phase == "initial" and profit_pts >= risk_pts * 0.5:
                 new_stop = entry - 0.05
                 self._apply_stop(new_stop, "breakeven")
 
-            elif self.stop_phase in ("initial", "breakeven") and profit_pts >= risk_pts * 1.5:
-                new_stop = self.lowest_seen + atr * 0.5
+            elif self.stop_phase in ("initial", "breakeven") and profit_pts >= risk_pts:
+                new_stop = self.lowest_seen + atr * 0.3
                 if new_stop < self.current_stop - 0.10:
                     self._apply_stop(new_stop, "trailing")
 
             elif self.stop_phase == "trailing":
-                new_stop = self.lowest_seen + atr * 0.5
+                new_stop = self.lowest_seen + atr * 0.3
                 if new_stop < self.current_stop - 0.10:
                     self._apply_stop(new_stop, "trailing")
 
