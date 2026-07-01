@@ -203,6 +203,65 @@ def setup_schedule() -> None:
     log.info(f"  {t_ah}  After-hours analysis  ({AFTER_HOURS_ANALYSIS} ET)")
 
 
+# ── Startup sync ───────────────────────────────────────────────────────────────
+
+def _sync_existing_position() -> None:
+    """
+    Called once on startup. If Alpaca already has an open SPY position
+    (leftover from a previous session), wire it into the strategy so the
+    bot monitors and closes it correctly instead of trying to open a second one.
+    """
+    global strategy, monitoring
+    pos = broker.get_position(SYMBOL)
+    if pos is None:
+        log.info("No existing position found — clean start.")
+        return
+
+    entry = float(pos.avg_entry_price)
+    qty   = int(pos.qty)
+    side  = "buy" if pos.side == "long" else "sell"
+    unreal = float(pos.unrealized_pl)
+
+    log.warning(
+        f"⚠️  Found existing {pos.side.upper()} position: "
+        f"{qty}x {SYMBOL} @ {entry:.2f} | Unrealised P&L: {unreal:+.2f}"
+    )
+
+    # Build a minimal strategy object so monitor() and close_all work
+    from analysis import MarketSnapshot, Bias
+    from strategy import OrbStrategy, TradeSetup, OrbRange
+    from datetime import date
+
+    # Use a flat snapshot if pre-market hasn't run yet
+    dummy_snap = snap or MarketSnapshot(
+        symbol=SYMBOL, timestamp=datetime.now(ET),
+        close=entry, ema20=entry, ema50=entry, ema200=entry,
+        rsi=50.0, macd_hist=0.0, atr=10.0,
+        bb_upper=entry*1.02, bb_lower=entry*0.98,
+        support=entry*0.97, resistance=entry*1.03,
+        score=0, bias="LONG" if side=="buy" else "SHORT", notes=[],
+    )
+
+    strat = OrbStrategy(broker, dummy_snap, db)
+    strat.in_trade     = True
+    strat.current_stop = entry * (0.992 if side == "buy" else 1.008)
+    strat.highest_seen = entry
+    strat.lowest_seen  = entry
+    strat.stop_phase   = "initial"
+
+    # Dummy setup so trailing stop has reference values
+    stop  = strat.current_stop
+    tp    = entry + (entry - stop) * 2 if side == "buy" else entry - (stop - entry) * 2
+    strat.setup = TradeSetup(side=side, entry=entry, stop_loss=stop,
+                             take_profit=tp, qty=qty, risk_usd=abs(entry-stop)*qty)
+    strat.orb   = OrbRange(high=entry+1, low=entry-1, size=2.0)
+
+    strategy  = strat
+    monitoring = True
+    log.info(f"Strategy synced to existing position — monitoring active. "
+             f"Will close at {CLOSE_ALL_TIME} ET.")
+
+
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -229,6 +288,9 @@ def main() -> None:
         db.log_equity(broker.equity())
     except Exception as e:
         log.warning(f"Initial equity log failed: {e}")
+
+    # Check for existing open position from previous session
+    _sync_existing_position()
 
     # Run pre-market analysis immediately on startup (useful if bot starts late)
     job_pre_market()
