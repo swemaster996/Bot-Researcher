@@ -36,8 +36,8 @@ RISK_PER_TRADE_PCT     = 0.01   # 1 % of account equity risked per trade
 # Higher conviction → larger allowed position size
 POSITION_PCT_BY_SCORE = {
     2: 0.30,   # just clears bias threshold — small position
-    3: 0.50,   # moderate conviction
-    4: 0.70,   # strong conviction
+    3: 1.00,   # moderate conviction  (was 0.50→0.60→0.80→1.00)
+    4: 1.00,   # strong conviction    (was 0.85 → +18% fler shares)
     5: 1.00,   # all 5 indicators aligned — full port
     6: 1.00,   # all 6 indicators (incl. volume) — full port
 }
