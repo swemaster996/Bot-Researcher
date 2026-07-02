@@ -7,6 +7,7 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -135,7 +136,8 @@ class OrbStrategy:
         pos = self.broker.get_position(SYMBOL)
         if pos is None:
             if self.in_trade:
-                log.info("Position closed (TP/SL hit or manual).")
+                log.info("Position closed (TP/SL hit or manual) — logging to Supabase.")
+                self._on_position_closed()
                 self.in_trade = False
             return
 
@@ -151,6 +153,35 @@ class OrbStrategy:
 
         if self.setup:
             self._trail_stop(price)
+
+    def _on_position_closed(self) -> None:
+        """Fetch exit price from Alpaca orders and log trade close to Supabase."""
+        if not self.db or self.trade_id < 0 or not self.setup:
+            return
+        try:
+            close_side = "sell" if self.setup.side == "buy" else "buy"
+            # Find the most recent filled closing order
+            orders = self.broker.api.list_orders(
+                status="closed", limit=10, direction="desc"
+            )
+            exit_price = None
+            for o in orders:
+                if o.symbol == SYMBOL and o.side == close_side and o.filled_avg_price:
+                    exit_price = float(o.filled_avg_price)
+                    log.info(f"Exit found via order {o.id[:8]}: ${exit_price:.2f}")
+                    break
+
+            if exit_price is None:
+                exit_price = self.broker.latest_price(SYMBOL)
+                log.info(f"Exit fallback to latest price: ${exit_price:.2f}")
+
+            qty = self.setup.qty
+            pnl = ((exit_price - self.setup.entry) if self.setup.side == "buy"
+                   else (self.setup.entry - exit_price)) * qty
+            self.db.log_trade_close(self.trade_id, exit_price, round(pnl, 2))
+            log.info(f"Supabase: trade close logged — exit=${exit_price:.2f} P&L={pnl:+.2f}")
+        except Exception as e:
+            log.warning(f"_on_position_closed failed: {e}")
 
     # ── Trailing stop ─────────────────────────────────────────────────────────
 

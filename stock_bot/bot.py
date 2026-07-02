@@ -137,10 +137,24 @@ def job_monitor() -> None:
 
 
 def job_close_all() -> None:
-    """15:55 ET — force-close everything before market close."""
+    """15:00 ET — force-close everything before market close."""
     global monitoring
     log.info("=== END OF DAY — closing all positions ===")
     monitoring = False
+
+    # Log EOD close to Supabase BEFORE cancelling
+    if strategy and strategy.in_trade and strategy.trade_id >= 0 and strategy.setup:
+        try:
+            pos = broker.get_position(SYMBOL)
+            if pos:
+                exit_price = float(pos.current_price)
+                setup = strategy.setup
+                pnl = ((exit_price - setup.entry) if setup.side == "buy"
+                       else (setup.entry - exit_price)) * setup.qty
+                db.log_trade_close(strategy.trade_id, exit_price, round(pnl, 2))
+                log.info(f"EOD close logged: exit=${exit_price:.2f}  P&L={pnl:+.2f}")
+        except Exception as e:
+            log.warning(f"EOD close log failed: {e}")
 
     try:
         broker.cancel_all_orders()
