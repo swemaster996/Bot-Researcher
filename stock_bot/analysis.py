@@ -164,6 +164,18 @@ def analyse(df: pd.DataFrame, symbol: str) -> MarketSnapshot:
         else:
             notes.append(f"⚪ Price mid-BB ({pct_b*100:.0f}%)")
 
+    # Volume confirmation (vs 20-day average)
+    if "volume" in df.columns and len(df) >= 20:
+        vol_avg = float(df["volume"].rolling(20).mean().iloc[-1])
+        vol_now = float(df["volume"].iloc[-1])
+        vol_ratio = vol_now / vol_avg if vol_avg > 0 else 1.0
+        if vol_ratio > 1.2:
+            score += 1; notes.append(f"✅ Volume surge ({vol_ratio:.1f}× avg — confirms move)")
+        elif vol_ratio < 0.8:
+            score -= 1; notes.append(f"🔴 Low volume ({vol_ratio:.1f}× avg — weak conviction)")
+        else:
+            notes.append(f"⚪ Normal volume ({vol_ratio:.1f}× avg)")
+
     # ── Bias decision ──────────────────────────────────────────────────────────
     if atr_val > MAX_ATR_FILTER:
         bias: Bias = "FLAT"
@@ -220,7 +232,7 @@ def _log_snapshot(s: MarketSnapshot) -> None:
     log.info(f"  RSI:      {s.rsi:>10.2f}   MACD-H: {s.macd_hist:>10.4f}   ATR:    {s.atr:>10.2f}")
     log.info(f"  BB:       {s.bb_lower:>10.2f} — {s.bb_upper:.2f}")
     log.info(f"  Support:  {s.support:>10.2f}   Resist: {s.resistance:>10.2f}")
-    log.info(f"  Bull score: {s.score:+d}/5")
+    log.info(f"  Bull score: {s.score:+d}/6")
     for note in s.notes:
         log.info(f"    {note}")
     log.info(f"  ➤ BIAS: {s.bias}")

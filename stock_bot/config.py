@@ -39,8 +39,10 @@ POSITION_PCT_BY_SCORE = {
     3: 0.50,   # moderate conviction
     4: 0.70,   # strong conviction
     5: 1.00,   # all 5 indicators aligned — full port
+    6: 1.00,   # all 6 indicators (incl. volume) — full port
 }
-MAX_STOP_PCT           = 0.008  # hard max stop: 0.8 % of entry price
+ATR_STOP_MULTIPLIER    = 1.0    # stop = 1×ATR below/above entry price (used as reference; overridden by MAX_STOP_PCT below)
+MAX_STOP_PCT           = 0.008  # fixed stop cap: 0.8% of entry price (original tight stop for larger positions)
 TAKE_PROFIT_RATIO      = 2.0    # take-profit = 2× the stop distance (2 R)
 TRAILING_AFTER_R       = 1.0    # activate trailing stop once +1 R is reached
 MAX_OPEN_POSITIONS     = 1      # one position at a time
