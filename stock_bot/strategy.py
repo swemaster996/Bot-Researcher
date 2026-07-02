@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -22,6 +22,8 @@ from config import (
     MAX_STOP_PCT,
     TAKE_PROFIT_RATIO,
     MAX_OPEN_POSITIONS,
+    MAX_TRADES_PER_DAY,
+    TRADE_COOLDOWN_MINUTES,
 )
 
 log = logging.getLogger(__name__)
@@ -68,6 +70,8 @@ class OrbStrategy:
         self.lowest_seen  = 999999.  # lowest price since entry  (SHORT trailing)
         self.current_stop = 0.0      # tracks where stop currently is
         self.stop_phase   = "initial"  # "initial" → "breakeven" → "trailing"
+        self.trades_today    = 0                     # entries taken today
+        self.cooldown_until: datetime | None = None  # re-entry blocked until this time
 
     # ── Phase 1: build opening range ──────────────────────────────────────────
 
@@ -99,9 +103,15 @@ class OrbStrategy:
     def check_entry(self) -> bool:
         """
         Returns True if an order was placed.
-        Will not trade if already traded today or bias is FLAT.
+        Respects MAX_TRADES_PER_DAY and cooldown after each close.
         """
         if self.in_trade or self.orb is None:
+            return False
+
+        if self.trades_today >= MAX_TRADES_PER_DAY:
+            return False
+
+        if self.cooldown_until and datetime.now(ET) < self.cooldown_until:
             return False
 
         if self.broker.position_count() >= MAX_OPEN_POSITIONS:
@@ -182,6 +192,14 @@ class OrbStrategy:
             log.info(f"Supabase: trade close logged — exit=${exit_price:.2f} P&L={pnl:+.2f}")
         except Exception as e:
             log.warning(f"_on_position_closed failed: {e}")
+
+        # Increment daily counter and set re-entry cooldown
+        self.trades_today += 1
+        self.cooldown_until = datetime.now(ET) + timedelta(minutes=TRADE_COOLDOWN_MINUTES)
+        log.info(
+            f"Trade {self.trades_today}/{MAX_TRADES_PER_DAY} done today. "
+            f"Cooldown until {self.cooldown_until.strftime('%H:%M')} ET"
+        )
 
     # ── Trailing stop ─────────────────────────────────────────────────────────
 
@@ -322,12 +340,14 @@ class OrbStrategy:
         self.stop_phase   = "initial"
 
     def reset_for_new_day(self) -> None:
-        self.orb          = None
-        self.setup        = None
-        self.in_trade     = False
-        self.trade_id     = -1
-        self.highest_seen = 0.0
-        self.lowest_seen  = 999999.
-        self.current_stop = 0.0
-        self.stop_phase   = "initial"
+        self.orb             = None
+        self.setup           = None
+        self.in_trade        = False
+        self.trade_id        = -1
+        self.highest_seen    = 0.0
+        self.lowest_seen     = 999999.
+        self.current_stop    = 0.0
+        self.stop_phase      = "initial"
+        self.trades_today    = 0
+        self.cooldown_until  = None
         log.info("Strategy reset for new trading day.")
