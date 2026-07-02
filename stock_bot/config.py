@@ -35,7 +35,7 @@ MAX_STOP_PCT        = 0.008   # hard max stop: 0.8 % of entry price
 TAKE_PROFIT_RATIO   = 2.0     # take-profit = 2× the stop distance (2 R)
 TRAILING_AFTER_R    = 1.0     # activate trailing stop once +1 R is reached
 MAX_OPEN_POSITIONS  = 1       # one trade at a time
-MAX_ATR_FILTER      = 9.0     # skip trade if daily ATR > this (too choppy)
+MAX_ATR_FILTER      = 15.0    # skip trade if daily ATR > this (only extreme days)
 
 # ── Technical-analysis parameters ─────────────────────────────────────────────
 EMA_FAST   = 20

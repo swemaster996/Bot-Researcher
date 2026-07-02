@@ -1321,3 +1321,10 @@ TypeError: Cannot convert tz-naive timestamps, use tz_localize to localize
 2026-07-02 16:09:29  INFO      Position | LONG 306x SPY @ 750.44 | P&L: -58.14 (-0.03%) | Stop: 747.12 [initial]
 2026-07-02 16:09:30  INFO      HTTP Request: POST https://mjtwpiwdvhcoegjnpcjv.supabase.co/rest/v1/bot_equity "HTTP/2 201 Created"
 2026-07-02 16:10:30  INFO      Position | LONG 306x SPY @ 750.44 | P&L: -113.22 (-0.05%) | Stop: 747.12 [initial]
+2026-07-02 16:11:30  INFO      Position | LONG 306x SPY @ 750.44 | P&L: -74.97 (-0.03%) | Stop: 747.12 [initial]
+2026-07-02 16:12:30  INFO      Position | LONG 306x SPY @ 750.44 | P&L: +76.50 (+0.03%) | Stop: 747.12 [initial]
+2026-07-02 16:13:30  INFO      Position | LONG 306x SPY @ 750.44 | P&L: +229.50 (+0.10%) | Stop: 747.12 [initial]
+2026-07-02 16:14:31  INFO      Position | LONG 306x SPY @ 750.44 | P&L: +168.30 (+0.07%) | Stop: 747.12 [initial]
+2026-07-02 16:14:31  INFO      HTTP Request: POST https://mjtwpiwdvhcoegjnpcjv.supabase.co/rest/v1/bot_equity "HTTP/2 201 Created"
+2026-07-02 16:15:31  INFO      Position | LONG 306x SPY @ 750.44 | P&L: +128.31 (+0.06%) | Stop: 747.12 [initial]
+2026-07-02 16:16:32  INFO      Position | LONG 306x SPY @ 750.44 | P&L: +171.36 (+0.07%) | Stop: 747.12 [initial]
