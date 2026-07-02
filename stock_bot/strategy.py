@@ -19,7 +19,7 @@ from config import (
     SYMBOL,
     ORB_MINUTES,
     RISK_PER_TRADE_PCT,
-    MAX_POSITION_PCT,
+    POSITION_PCT_BY_SCORE,
     MAX_STOP_PCT,
     TAKE_PROFIT_RATIO,
     MAX_OPEN_POSITIONS,
@@ -281,6 +281,16 @@ class OrbStrategy:
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
+    def _conviction_cap(self, equity: float, entry: float) -> tuple[int, float]:
+        """
+        Return (max_qty, pct) based on signal score.
+        Higher |score| → larger allowed position.
+        """
+        score     = abs(self.snapshot.score)
+        pct       = POSITION_PCT_BY_SCORE.get(score, POSITION_PCT_BY_SCORE[2])
+        max_qty   = math.floor((equity * pct) / entry)
+        return max_qty, pct
+
     def _build_long_setup(self, entry: float, equity: float) -> TradeSetup:
         # Stop = below ORB low; capped by MAX_STOP_PCT
         raw_stop   = self.orb.low
@@ -291,17 +301,14 @@ class OrbStrategy:
         tp        = entry + risk_pts * TAKE_PROFIT_RATIO
         risk_usd  = equity * RISK_PER_TRADE_PCT
 
-        # Size by risk (1%), then hard-cap by MAX_POSITION_PCT to prevent all-in
-        qty_risk  = math.floor(risk_usd / risk_pts) if risk_pts > 0 else 0
-        qty_cap   = math.floor((equity * MAX_POSITION_PCT) / entry)
-        qty       = min(qty_risk, qty_cap)
+        qty_risk        = math.floor(risk_usd / risk_pts) if risk_pts > 0 else 0
+        qty_cap, cap_pct = self._conviction_cap(equity, entry)
+        qty             = min(qty_risk, qty_cap)
 
-        if qty < qty_risk:
-            log.info(
-                f"Position cap applied: risk-sized qty={qty_risk} → capped to {qty} "
-                f"(max {MAX_POSITION_PCT*100:.0f}% of equity = ${equity*MAX_POSITION_PCT:,.0f})"
-            )
-
+        log.info(
+            f"Sizing | score={self.snapshot.score:+d} → cap={cap_pct*100:.0f}% "
+            f"(max ${equity*cap_pct:,.0f}) | risk qty={qty_risk} → final qty={qty}"
+        )
         return TradeSetup("buy", entry, stop, tp, qty, risk_usd)
 
     def _build_short_setup(self, entry: float, equity: float) -> TradeSetup:
@@ -314,17 +321,14 @@ class OrbStrategy:
         tp        = entry - risk_pts * TAKE_PROFIT_RATIO
         risk_usd  = equity * RISK_PER_TRADE_PCT
 
-        # Size by risk (1%), then hard-cap by MAX_POSITION_PCT to prevent all-in
-        qty_risk  = math.floor(risk_usd / risk_pts) if risk_pts > 0 else 0
-        qty_cap   = math.floor((equity * MAX_POSITION_PCT) / entry)
-        qty       = min(qty_risk, qty_cap)
+        qty_risk        = math.floor(risk_usd / risk_pts) if risk_pts > 0 else 0
+        qty_cap, cap_pct = self._conviction_cap(equity, entry)
+        qty             = min(qty_risk, qty_cap)
 
-        if qty < qty_risk:
-            log.info(
-                f"Position cap applied: risk-sized qty={qty_risk} → capped to {qty} "
-                f"(max {MAX_POSITION_PCT*100:.0f}% of equity = ${equity*MAX_POSITION_PCT:,.0f})"
-            )
-
+        log.info(
+            f"Sizing | score={self.snapshot.score:+d} → cap={cap_pct*100:.0f}% "
+            f"(max ${equity*cap_pct:,.0f}) | risk qty={qty_risk} → final qty={qty}"
+        )
         return TradeSetup("sell", entry, stop, tp, qty, risk_usd)
 
     def _execute(self, setup: TradeSetup) -> None:

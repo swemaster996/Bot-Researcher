@@ -31,7 +31,15 @@ ORB_MINUTES = 15   # opening range window in minutes
 
 # ── Risk management ────────────────────────────────────────────────────────────
 RISK_PER_TRADE_PCT     = 0.01   # 1 % of account equity risked per trade
-MAX_POSITION_PCT       = 0.25   # max 25 % of equity in one position (prevents all-in)
+
+# Dynamic position cap by signal score (|score| = 2..5)
+# Higher conviction → larger allowed position size
+POSITION_PCT_BY_SCORE = {
+    2: 0.20,   # just clears bias threshold — small position
+    3: 0.35,   # moderate conviction
+    4: 0.50,   # strong conviction
+    5: 0.75,   # all 5 indicators aligned — large position
+}
 MAX_STOP_PCT           = 0.008  # hard max stop: 0.8 % of entry price
 TAKE_PROFIT_RATIO      = 2.0    # take-profit = 2× the stop distance (2 R)
 TRAILING_AFTER_R       = 1.0    # activate trailing stop once +1 R is reached

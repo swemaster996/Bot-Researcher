@@ -22,6 +22,7 @@ from config import (
     SYMBOL,
     ORB_MINUTES,
     RISK_PER_TRADE_PCT,
+    POSITION_PCT_BY_SCORE,
     MAX_STOP_PCT,
     TAKE_PROFIT_RATIO,
 )
@@ -235,8 +236,13 @@ def simulate_day(broker: Broker, day: date, equity: float) -> dict:
 
     # ── Calculate P&L ────────────────────────────────────────────────────────
     if entry_price and result["exit_price"]:
-        risk_pts = abs(entry_price - stop_loss)
-        qty      = math.floor((equity * RISK_PER_TRADE_PCT) / risk_pts) if risk_pts > 0 else 0
+        risk_pts  = abs(entry_price - stop_loss)
+        qty_risk  = math.floor((equity * RISK_PER_TRADE_PCT) / risk_pts) if risk_pts > 0 else 0
+        # Conviction-based cap: use abs(score) to look up position pct
+        abs_score = abs(snap.score)
+        cap_pct   = POSITION_PCT_BY_SCORE.get(abs_score, POSITION_PCT_BY_SCORE[2])
+        qty_cap   = math.floor((equity * cap_pct) / entry_price)
+        qty       = min(qty_risk, qty_cap)
         if side == "buy":
             pnl = (result["exit_price"] - entry_price) * qty
         else:
