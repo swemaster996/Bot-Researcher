@@ -58,11 +58,27 @@ orb_building    = False    # True from market open until ORB end
 _equity_tick    = 0        # counter for equity logging (every 5 min)
 
 
+# ── Handelsdagsguard ───────────────────────────────────────────────────────────
+
+def is_trading_day() -> bool:
+    """Returnerar True om idag finns i Alpacas marknadskalender (ej helg/helgdag)."""
+    try:
+        today = datetime.now(ET).date()
+        cal   = broker.api.get_calendar(start=str(today), end=str(today))
+        return len(cal) > 0
+    except Exception as e:
+        log.warning(f"Kalendercheck misslyckades: {e} — antar handelsdag")
+        return True  # fail-safe: kör ändå
+
+
 # ── Scheduled jobs ─────────────────────────────────────────────────────────────
 
 def job_pre_market() -> None:
     """08:00 ET — full technical analysis, generate daily bias."""
     global snap, strategy
+    if not is_trading_day():
+        log.info("Inte en handelsdag — hoppar över pre-market analys.")
+        return
     log.info("=== PRE-MARKET ANALYSIS STARTING ===")
     try:
         df   = broker.daily_bars(SYMBOL, days=250)
@@ -78,6 +94,9 @@ def job_pre_market() -> None:
 def job_market_open() -> None:
     """09:30 ET — market just opened, mark that we're in the ORB collection window."""
     global orb_building, monitoring
+    if not is_trading_day():
+        log.info("Inte en handelsdag — hoppar över market open.")
+        return
     log.info("=== MARKET OPEN — collecting opening range ===")
     orb_building = True
     monitoring   = False
@@ -86,6 +105,9 @@ def job_market_open() -> None:
 def job_orb_end() -> None:
     """09:45 ET — ORB window done; build range and start monitoring."""
     global orb_building, monitoring
+    if not is_trading_day():
+        log.info("Inte en handelsdag — hoppar över ORB.")
+        return
     if strategy is None:
         log.warning("Strategy not initialised — skipping ORB.")
         return
@@ -168,6 +190,9 @@ def job_close_all() -> None:
 
 def job_after_hours() -> None:
     """17:00 ET — re-run analysis on today's closed data (prep for tomorrow)."""
+    if not is_trading_day():
+        log.info("Inte en handelsdag — hoppar över after-hours analys.")
+        return
     log.info("=== AFTER-HOURS ANALYSIS ===")
     try:
         df   = broker.daily_bars(SYMBOL, days=250)

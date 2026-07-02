@@ -20,6 +20,7 @@ from config import (
     ORB_MINUTES,
     RISK_PER_TRADE_PCT,
     POSITION_PCT_BY_SCORE,
+    ATR_STOP_MULTIPLIER,
     MAX_STOP_PCT,
     TAKE_PROFIT_RATIO,
     MAX_OPEN_POSITIONS,
@@ -210,38 +211,32 @@ class OrbStrategy:
 
     def _trail_stop(self, price: float) -> None:
         """
-        Two-phase trailing stop:
-          Phase 1 — break-even: once unrealised profit >= 1R, move stop to entry.
-          Phase 2 — trailing:   once >= 1.5R, trail stop 0.5 × ATR below highest.
-        Stop only ever moves in the favourable direction.
+        Trailing stop — aktiveras när vinst når 2R (matchar backtest exakt).
+        Drar stoppet 0.5×ATR under/över det extremvärde som setts sedan entry.
+        Ingen break-even-fas — stoppet rör sig bara i lönsam riktning.
         """
         if self.setup is None:
             return
 
-        atr       = self.snapshot.atr if self.snapshot.atr else 1.0
-        entry     = self.setup.entry
-        risk_pts  = abs(entry - self.setup.stop_loss)   # 1R in price points
+        atr_val      = self.snapshot.atr if self.snapshot.atr else 1.0
+        entry        = self.setup.entry
+        initial_risk = abs(entry - self.setup.stop_loss)   # 1R i prispoäng
 
         if self.setup.side == "buy":
-            # Track highest price seen
             if price > self.highest_seen:
                 self.highest_seen = price
 
             profit_pts = self.highest_seen - entry
 
-            # Phase 1: break-even at 0.5R
-            if self.stop_phase == "initial" and profit_pts >= risk_pts * 0.5:
-                new_stop = entry + 0.05
-                self._apply_stop(new_stop, "breakeven")
-
-            # Phase 2: trailing at 1R
-            elif self.stop_phase in ("initial", "breakeven") and profit_pts >= risk_pts:
-                new_stop = self.highest_seen - atr * 0.3
-                if new_stop > self.current_stop + 0.10:
-                    self._apply_stop(new_stop, "trailing")
-
-            elif self.stop_phase == "trailing":
-                new_stop = self.highest_seen - atr * 0.3
+            # Trail aktiveras vid 2R — bevarar 2R TP-nivån
+            if profit_pts >= initial_risk * 2.0:
+                if self.stop_phase != "trailing":
+                    self.stop_phase = "trailing"
+                    log.info(
+                        f"🔒 2R nådd (+{profit_pts:.2f} pts) — "
+                        f"trailing stop aktiv (ATR×0.5 = {atr_val*0.5:.2f} under high)"
+                    )
+                new_stop = self.highest_seen - atr_val * 0.5
                 if new_stop > self.current_stop + 0.10:
                     self._apply_stop(new_stop, "trailing")
 
@@ -251,17 +246,15 @@ class OrbStrategy:
 
             profit_pts = entry - self.lowest_seen
 
-            if self.stop_phase == "initial" and profit_pts >= risk_pts * 0.5:
-                new_stop = entry - 0.05
-                self._apply_stop(new_stop, "breakeven")
-
-            elif self.stop_phase in ("initial", "breakeven") and profit_pts >= risk_pts:
-                new_stop = self.lowest_seen + atr * 0.3
-                if new_stop < self.current_stop - 0.10:
-                    self._apply_stop(new_stop, "trailing")
-
-            elif self.stop_phase == "trailing":
-                new_stop = self.lowest_seen + atr * 0.3
+            # Trail aktiveras vid 2R
+            if profit_pts >= initial_risk * 2.0:
+                if self.stop_phase != "trailing":
+                    self.stop_phase = "trailing"
+                    log.info(
+                        f"🔒 2R nådd (+{profit_pts:.2f} pts) — "
+                        f"trailing stop aktiv (ATR×0.5 = {atr_val*0.5:.2f} över low)"
+                    )
+                new_stop = self.lowest_seen + atr_val * 0.5
                 if new_stop < self.current_stop - 0.10:
                     self._apply_stop(new_stop, "trailing")
 
@@ -296,10 +289,11 @@ class OrbStrategy:
         return max_qty, pct
 
     def _build_long_setup(self, entry: float, equity: float) -> TradeSetup:
-        # Stop = below ORB low; capped by MAX_STOP_PCT
-        raw_stop   = self.orb.low
-        floor_stop = entry * (1 - MAX_STOP_PCT)
-        stop       = max(raw_stop, floor_stop)
+        # ATR-based stop; hard floor caps max loss at MAX_STOP_PCT
+        atr_pts    = self.snapshot.atr if self.snapshot.atr else 5.0
+        atr_stop   = entry - atr_pts * ATR_STOP_MULTIPLIER
+        safe_floor = entry * (1 - MAX_STOP_PCT)
+        stop       = max(atr_stop, safe_floor)   # closer to entry wins
         risk_pts   = entry - stop
 
         tp        = entry + risk_pts * TAKE_PROFIT_RATIO
@@ -316,10 +310,11 @@ class OrbStrategy:
         return TradeSetup("buy", entry, stop, tp, qty, risk_usd)
 
     def _build_short_setup(self, entry: float, equity: float) -> TradeSetup:
-        # Stop = above ORB high; capped by MAX_STOP_PCT
-        raw_stop   = self.orb.high
-        ceil_stop  = entry * (1 + MAX_STOP_PCT)
-        stop       = min(raw_stop, ceil_stop)
+        # ATR-based stop; hard ceiling caps max loss at MAX_STOP_PCT
+        atr_pts    = self.snapshot.atr if self.snapshot.atr else 5.0
+        atr_stop   = entry + atr_pts * ATR_STOP_MULTIPLIER
+        safe_ceil  = entry * (1 + MAX_STOP_PCT)
+        stop       = min(atr_stop, safe_ceil)    # closer to entry wins
         risk_pts   = stop - entry
 
         tp        = entry - risk_pts * TAKE_PROFIT_RATIO
