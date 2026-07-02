@@ -14,7 +14,7 @@ import pandas as pd
 from config import (
     EMA_FAST, EMA_SLOW, EMA_TREND,
     RSI_PERIOD, MACD_FAST, MACD_SLOW, MACD_SIG,
-    BB_PERIOD, BB_STD, ATR_PERIOD,
+    BB_PERIOD, BB_STD, ATR_PERIOD, MAX_ATR_FILTER,
 )
 
 log = logging.getLogger(__name__)
@@ -165,7 +165,10 @@ def analyse(df: pd.DataFrame, symbol: str) -> MarketSnapshot:
             notes.append(f"⚪ Price mid-BB ({pct_b*100:.0f}%)")
 
     # ── Bias decision ──────────────────────────────────────────────────────────
-    if score >= 2:
+    if atr_val > MAX_ATR_FILTER:
+        bias: Bias = "FLAT"
+        notes.append(f"⛔ ATR {atr_val:.2f} too high — skipping (choppy market)")
+    elif score >= 2:
         bias: Bias = "LONG"
     elif score <= -2:
         bias = "SHORT"
