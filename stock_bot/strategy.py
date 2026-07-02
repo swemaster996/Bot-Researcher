@@ -118,6 +118,10 @@ class OrbStrategy:
         if self.broker.position_count() >= MAX_OPEN_POSITIONS:
             return False
 
+        # Min conviction filter — skip weak signals (|score| < 3)
+        if abs(self.snapshot.score) < 3:
+            return False
+
         price  = self.broker.latest_price(SYMBOL)
         equity = self.broker.equity()
         bias: Bias = self.snapshot.bias

@@ -35,10 +35,10 @@ RISK_PER_TRADE_PCT     = 0.01   # 1 % of account equity risked per trade
 # Dynamic position cap by signal score (|score| = 2..5)
 # Higher conviction → larger allowed position size
 POSITION_PCT_BY_SCORE = {
-    2: 0.20,   # just clears bias threshold — small position
-    3: 0.35,   # moderate conviction
-    4: 0.50,   # strong conviction
-    5: 0.75,   # all 5 indicators aligned — large position
+    2: 0.30,   # just clears bias threshold — small position
+    3: 0.50,   # moderate conviction
+    4: 0.70,   # strong conviction
+    5: 1.00,   # all 5 indicators aligned — full port
 }
 MAX_STOP_PCT           = 0.008  # hard max stop: 0.8 % of entry price
 TAKE_PROFIT_RATIO      = 2.0    # take-profit = 2× the stop distance (2 R)

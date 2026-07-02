@@ -136,6 +136,11 @@ def simulate_day(broker: Broker, day: date, equity: float) -> dict:
         result["exit_reason"] = "flat_bias"
         return result
 
+    # Min conviction filter — skip weak signals (|score| < 3)
+    if abs(snap.score) < 3:
+        result["exit_reason"] = "low_conviction"
+        return result
+
     # ── Intraday bars ────────────────────────────────────────────────────────
     try:
         bars = fetch_intraday(broker, SYMBOL, day)
@@ -279,7 +284,7 @@ def main():
         )
 
     # ── Summary ──────────────────────────────────────────────────────────────
-    trades      = [r for r in results if r["exit_reason"] not in ("no_trade", "flat_bias", "analysis_error", "data_error", "no_intraday_data", "no_orb_bars", "insufficient_history")]
+    trades      = [r for r in results if r["exit_reason"] not in ("no_trade", "flat_bias", "low_conviction", "analysis_error", "data_error", "no_intraday_data", "no_orb_bars", "insufficient_history")]
     wins        = [r for r in trades if r["pnl"] > 0]
     losses      = [r for r in trades if r["pnl"] < 0]
     total_pnl   = sum(r["pnl"] for r in results)
