@@ -26,6 +26,12 @@ from config import (
     ATR_STOP_MULTIPLIER,
     MAX_STOP_PCT,
     TAKE_PROFIT_RATIO,
+    BREAKEVEN_AFTER_R,
+    TRAILING_AFTER_R,
+    CLOSE_ALL_TIME,
+    MIN_ATR_FILTER,
+    MIN_SCORE_FILTER,
+    adaptive_risk_pct,
 )
 
 logging.basicConfig(
@@ -38,9 +44,8 @@ log = logging.getLogger(__name__)
 ET  = ZoneInfo("America/New_York")
 
 STARTING_EQUITY = 100_000.0
-BACKTEST_DAYS   = 160
-CLOSE_HOUR_ET   = 15   # force-close at 15:00 ET
-CLOSE_MIN_ET    = 0
+BACKTEST_DAYS   = 252
+CLOSE_HOUR_ET, CLOSE_MIN_ET = map(int, CLOSE_ALL_TIME.split(":"))   # force-close time, from config
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -137,9 +142,14 @@ def simulate_day(broker: Broker, day: date, equity: float) -> dict:
         result["exit_reason"] = "flat_bias"
         return result
 
-    # Min conviction filter — skip weak signals (|score| < 3)
-    if abs(snap.score) < 3:
+    # Min conviction filter — skip weak signals
+    if abs(snap.score) < MIN_SCORE_FILTER:
         result["exit_reason"] = "low_conviction"
+        return result
+
+    # Min ATR filter — skip low-volatility days (too quiet for ORB)
+    if snap.atr and snap.atr < MIN_ATR_FILTER:
+        result["exit_reason"] = "low_atr"
         return result
 
     # ── Intraday bars ────────────────────────────────────────────────────────
@@ -219,7 +229,9 @@ def simulate_day(broker: Broker, day: date, equity: float) -> dict:
                 result["take_profit"] = round(take_profit, 2)
 
         else:
-            # ── Trailing stop (activates only beyond 2R — preserves 2R TP) ─
+            # ── Two-phase stop: breakeven at +BREAKEVEN_AFTER_R, then ATR
+            #    trailing at +TRAILING_AFTER_R. Prevents a trade that ran to
+            #    +1-1.9R from round-tripping back to a full stop-loss.
             initial_risk = abs(entry_price - stop_loss)
 
             if side == "buy":
@@ -227,10 +239,14 @@ def simulate_day(broker: Broker, day: date, equity: float) -> dict:
                     highest_seen = bar["high"]
                 profit_pts = highest_seen - entry_price
 
-                # Trail only after price clears 2R — captures extended moves
-                if profit_pts >= initial_risk * 2.0:
-                    if stop_phase != "trailing":
-                        stop_phase = "trailing"
+                if stop_phase == "initial" and profit_pts >= initial_risk * BREAKEVEN_AFTER_R:
+                    be_stop = entry_price * 1.0005
+                    if be_stop > current_stop:
+                        current_stop = be_stop
+                        stop_phase = "breakeven"
+
+                if profit_pts >= initial_risk * TRAILING_AFTER_R:
+                    stop_phase = "trailing"
                     new_stop = highest_seen - atr_pts * 0.5
                     if new_stop > current_stop + 0.10:
                         current_stop = new_stop
@@ -240,6 +256,15 @@ def simulate_day(broker: Broker, day: date, equity: float) -> dict:
                     if bar["low"] <= current_stop:
                         result["exit_price"]  = round(current_stop, 2)
                         result["exit_reason"] = "trailing_stop"
+                        break
+                elif stop_phase == "breakeven":
+                    if bar["high"] >= take_profit:
+                        result["exit_price"]  = round(take_profit, 2)
+                        result["exit_reason"] = "take_profit"
+                        break
+                    if bar["low"] <= current_stop:
+                        result["exit_price"]  = round(current_stop, 2)
+                        result["exit_reason"] = "breakeven_stop"
                         break
                 else:
                     if bar["high"] >= take_profit:
@@ -256,10 +281,14 @@ def simulate_day(broker: Broker, day: date, equity: float) -> dict:
                     lowest_seen = bar["low"]
                 profit_pts = entry_price - lowest_seen
 
-                # Trail only after price clears 2R
-                if profit_pts >= initial_risk * 2.0:
-                    if stop_phase != "trailing":
-                        stop_phase = "trailing"
+                if stop_phase == "initial" and profit_pts >= initial_risk * BREAKEVEN_AFTER_R:
+                    be_stop = entry_price * 0.9995
+                    if be_stop < current_stop:
+                        current_stop = be_stop
+                        stop_phase = "breakeven"
+
+                if profit_pts >= initial_risk * TRAILING_AFTER_R:
+                    stop_phase = "trailing"
                     new_stop = lowest_seen + atr_pts * 0.5
                     if new_stop < current_stop - 0.10:
                         current_stop = new_stop
@@ -269,6 +298,15 @@ def simulate_day(broker: Broker, day: date, equity: float) -> dict:
                     if bar["high"] >= current_stop:
                         result["exit_price"]  = round(current_stop, 2)
                         result["exit_reason"] = "trailing_stop"
+                        break
+                elif stop_phase == "breakeven":
+                    if bar["low"] <= take_profit:
+                        result["exit_price"]  = round(take_profit, 2)
+                        result["exit_reason"] = "take_profit"
+                        break
+                    if bar["high"] >= current_stop:
+                        result["exit_price"]  = round(current_stop, 2)
+                        result["exit_reason"] = "breakeven_stop"
                         break
                 else:
                     if bar["low"] <= take_profit:
@@ -293,7 +331,8 @@ def simulate_day(broker: Broker, day: date, equity: float) -> dict:
     # ── Calculate P&L ────────────────────────────────────────────────────────
     if entry_price and result["exit_price"]:
         risk_pts  = abs(entry_price - stop_loss)   # original risk for sizing
-        qty_risk  = math.floor((equity * RISK_PER_TRADE_PCT) / risk_pts) if risk_pts > 0 else 0
+        risk_pct  = adaptive_risk_pct(snap.atr)    # scale risk by market volatility
+        qty_risk  = math.floor((equity * risk_pct) / risk_pts) if risk_pts > 0 else 0
         # Conviction-based cap: use abs(score) to look up position pct
         abs_score = abs(snap.score)
         cap_pct   = POSITION_PCT_BY_SCORE.get(abs_score, POSITION_PCT_BY_SCORE[2])
@@ -363,9 +402,4 @@ def main():
 
     # Save to CSV
     df = pd.DataFrame(results)
-    df.to_csv("backtest_results.csv", index=False)
-    log.info("  Results saved to backtest_results.csv")
-
-
-if __name__ == "__main__":
-    main()
+    df.to_csv("backtest_results.csv", index=False

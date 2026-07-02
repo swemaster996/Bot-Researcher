@@ -23,9 +23,14 @@ from config import (
     ATR_STOP_MULTIPLIER,
     MAX_STOP_PCT,
     TAKE_PROFIT_RATIO,
+    BREAKEVEN_AFTER_R,
+    TRAILING_AFTER_R,
     MAX_OPEN_POSITIONS,
     MAX_TRADES_PER_DAY,
     TRADE_COOLDOWN_MINUTES,
+    MIN_ATR_FILTER,
+    MIN_SCORE_FILTER,
+    adaptive_risk_pct,
 )
 
 log = logging.getLogger(__name__)
@@ -119,8 +124,13 @@ class OrbStrategy:
         if self.broker.position_count() >= MAX_OPEN_POSITIONS:
             return False
 
-        # Min conviction filter — skip weak signals (|score| < 3)
-        if abs(self.snapshot.score) < 3:
+        # Min conviction filter — skip weak signals
+        if abs(self.snapshot.score) < MIN_SCORE_FILTER:
+            return False
+
+        # Min ATR filter — skip low-volatility days (too quiet for ORB)
+        if self.snapshot.atr and self.snapshot.atr < MIN_ATR_FILTER:
+            log.info(f"ATR {self.snapshot.atr:.2f} < {MIN_ATR_FILTER} — för lugn dag, hoppar över.")
             return False
 
         price  = self.broker.latest_price(SYMBOL)
@@ -211,9 +221,12 @@ class OrbStrategy:
 
     def _trail_stop(self, price: float) -> None:
         """
-        Trailing stop — aktiveras när vinst når 2R (matchar backtest exakt).
-        Drar stoppet 0.5×ATR under/över det extremvärde som setts sedan entry.
-        Ingen break-even-fas — stoppet rör sig bara i lönsam riktning.
+        Two-phase stop management:
+          1. Breakeven — once profit reaches BREAKEVEN_AFTER_R, move stop to
+             entry (+small buffer). Stops a trade that ran to +1-1.9R from
+             round-tripping all the way back to a full stop-loss by EOD.
+          2. Trailing  — once profit reaches TRAILING_AFTER_R, trail the stop
+             0.5×ATR behind the extreme seen since entry.
         """
         if self.setup is None:
             return
@@ -228,12 +241,18 @@ class OrbStrategy:
 
             profit_pts = self.highest_seen - entry
 
-            # Trail aktiveras vid 2R — bevarar 2R TP-nivån
-            if profit_pts >= initial_risk * 2.0:
+            # Breakeven — lock in "no worse than scratch" once +BREAKEVEN_AFTER_R hit
+            if self.stop_phase == "initial" and profit_pts >= initial_risk * BREAKEVEN_AFTER_R:
+                be_stop = entry * 1.0005
+                if be_stop > self.current_stop:
+                    log.info(f"🔒 +{BREAKEVEN_AFTER_R:.2f}R nådd (+{profit_pts:.2f} pts) — stop → breakeven")
+                    self._apply_stop(be_stop, "breakeven")
+
+            # Trailing — activates at +TRAILING_AFTER_R
+            if profit_pts >= initial_risk * TRAILING_AFTER_R:
                 if self.stop_phase != "trailing":
-                    self.stop_phase = "trailing"
                     log.info(
-                        f"🔒 2R nådd (+{profit_pts:.2f} pts) — "
+                        f"🔒 +{TRAILING_AFTER_R:.2f}R nådd (+{profit_pts:.2f} pts) — "
                         f"trailing stop aktiv (ATR×0.5 = {atr_val*0.5:.2f} under high)"
                     )
                 new_stop = self.highest_seen - atr_val * 0.5
@@ -246,12 +265,18 @@ class OrbStrategy:
 
             profit_pts = entry - self.lowest_seen
 
-            # Trail aktiveras vid 2R
-            if profit_pts >= initial_risk * 2.0:
+            # Breakeven
+            if self.stop_phase == "initial" and profit_pts >= initial_risk * BREAKEVEN_AFTER_R:
+                be_stop = entry * 0.9995
+                if be_stop < self.current_stop:
+                    log.info(f"🔒 +{BREAKEVEN_AFTER_R:.2f}R nådd (+{profit_pts:.2f} pts) — stop → breakeven")
+                    self._apply_stop(be_stop, "breakeven")
+
+            # Trailing — activates at +TRAILING_AFTER_R
+            if profit_pts >= initial_risk * TRAILING_AFTER_R:
                 if self.stop_phase != "trailing":
-                    self.stop_phase = "trailing"
                     log.info(
-                        f"🔒 2R nådd (+{profit_pts:.2f} pts) — "
+                        f"🔒 +{TRAILING_AFTER_R:.2f}R nådd (+{profit_pts:.2f} pts) — "
                         f"trailing stop aktiv (ATR×0.5 = {atr_val*0.5:.2f} över low)"
                     )
                 new_stop = self.lowest_seen + atr_val * 0.5
@@ -297,15 +322,17 @@ class OrbStrategy:
         risk_pts   = entry - stop
 
         tp        = entry + risk_pts * TAKE_PROFIT_RATIO
-        risk_usd  = equity * RISK_PER_TRADE_PCT
+        risk_pct  = adaptive_risk_pct(self.snapshot.atr)
+        risk_usd  = equity * risk_pct
 
         qty_risk        = math.floor(risk_usd / risk_pts) if risk_pts > 0 else 0
         qty_cap, cap_pct = self._conviction_cap(equity, entry)
         qty             = min(qty_risk, qty_cap)
 
         log.info(
-            f"Sizing | score={self.snapshot.score:+d} → cap={cap_pct*100:.0f}% "
-            f"(max ${equity*cap_pct:,.0f}) | risk qty={qty_risk} → final qty={qty}"
+            f"Sizing | score={self.snapshot.score:+d} ATR={self.snapshot.atr:.1f} "
+            f"risk={risk_pct*100:.1f}% → cap={cap_pct*100:.0f}% | "
+            f"risk qty={qty_risk} → final qty={qty}"
         )
         return TradeSetup("buy", entry, stop, tp, qty, risk_usd)
 
@@ -318,15 +345,17 @@ class OrbStrategy:
         risk_pts   = stop - entry
 
         tp        = entry - risk_pts * TAKE_PROFIT_RATIO
-        risk_usd  = equity * RISK_PER_TRADE_PCT
+        risk_pct  = adaptive_risk_pct(self.snapshot.atr)
+        risk_usd  = equity * risk_pct
 
         qty_risk        = math.floor(risk_usd / risk_pts) if risk_pts > 0 else 0
         qty_cap, cap_pct = self._conviction_cap(equity, entry)
         qty             = min(qty_risk, qty_cap)
 
         log.info(
-            f"Sizing | score={self.snapshot.score:+d} → cap={cap_pct*100:.0f}% "
-            f"(max ${equity*cap_pct:,.0f}) | risk qty={qty_risk} → final qty={qty}"
+            f"Sizing | score={self.snapshot.score:+d} ATR={self.snapshot.atr:.1f} "
+            f"risk={risk_pct*100:.1f}% → cap={cap_pct*100:.0f}% | "
+            f"risk qty={qty_risk} → final qty={qty}"
         )
         return TradeSetup("sell", entry, stop, tp, qty, risk_usd)
 

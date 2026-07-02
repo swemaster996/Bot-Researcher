@@ -23,8 +23,8 @@ SYMBOL = "SPY"          # S&P 500 ETF  (change to "QQQ" for Nasdaq)
 PRE_MARKET_ANALYSIS_TIME = "08:00"   # full overnight analysis
 ORB_START_TIME           = "09:30"   # market open — begin collecting range
 ORB_END_TIME             = "09:45"   # first 15 min = opening range
-MONITOR_UNTIL            = "14:55"   # stop new entries after this
-CLOSE_ALL_TIME           = "15:00"   # force-close all positions (1 hour before close)
+MONITOR_UNTIL            = "15:30"   # stop new entries after this (was 14:55 — gave trades more runway)
+CLOSE_ALL_TIME           = "15:45"   # force-close all positions (was 15:00 — cut winners short before reaching TP)
 AFTER_HOURS_ANALYSIS     = "17:00"   # evening run for tomorrow prep
 
 ORB_MINUTES = 15   # opening range window in minutes
@@ -32,23 +32,50 @@ ORB_MINUTES = 15   # opening range window in minutes
 # ── Risk management ────────────────────────────────────────────────────────────
 RISK_PER_TRADE_PCT     = 0.01   # 1 % of account equity risked per trade
 
-# Dynamic position cap by signal score (|score| = 2..5)
-# Higher conviction → larger allowed position size
+# Dynamic position cap by signal score (|score| = 2..6)
+# Cap at 1.5× equity lets the risk model (RISK_PER_TRADE_PCT) be the binding
+# constraint rather than an arbitrary size ceiling. Intraday margin allows
+# 4:1 so 1.5× is very conservative. Score=2 stays small (weak signal).
 POSITION_PCT_BY_SCORE = {
-    2: 0.30,   # just clears bias threshold — small position
-    3: 1.00,   # moderate conviction  (was 0.50→0.60→0.80→1.00)
-    4: 1.00,   # strong conviction    (was 0.85 → +18% fler shares)
-    5: 1.00,   # all 5 indicators aligned — full port
-    6: 1.00,   # all 6 indicators (incl. volume) — full port
+    2: 0.30,   # weak signal — small position
+    3: 1.50,   # moderate conviction  (was 1.00 — cap freed up)
+    4: 1.50,   # strong conviction
+    5: 1.50,   # very strong
+    6: 1.50,   # all 6 indicators aligned
 }
 ATR_STOP_MULTIPLIER    = 1.0    # stop = 1×ATR below/above entry price (used as reference; overridden by MAX_STOP_PCT below)
 MAX_STOP_PCT           = 0.008  # fixed stop cap: 0.8% of entry price (original tight stop for larger positions)
 TAKE_PROFIT_RATIO      = 2.0    # take-profit = 2× the stop distance (2 R)
-TRAILING_AFTER_R       = 1.0    # activate trailing stop once +1 R is reached
+
+# Adaptive risk scaling by ATR — bet bigger on trending days, smaller on choppy days
+RISK_ATR_HIGH      = 8.0    # ATR ≥ this → trending market (e.g. March 2026 crash)
+RISK_ATR_LOW       = 5.0    # ATR < this → choppy/quiet market
+RISK_PCT_HIGH_VOL  = 0.015  # 1.5% risk on trending days  (default was 1.0%)
+RISK_PCT_NORMAL    = 0.010  # 1.0% risk on normal days
+RISK_PCT_LOW_VOL   = 0.005  # 0.5% risk on quiet days
+BREAKEVEN_AFTER_R      = 0.75   # move stop to entry once +0.75 R is reached — stops winners round-tripping to a full loss
+TRAILING_AFTER_R       = 1.0    # activate ATR trailing stop once +1 R is reached
 MAX_OPEN_POSITIONS     = 1      # one position at a time
 MAX_TRADES_PER_DAY     = 3      # max entries per trading day
 TRADE_COOLDOWN_MINUTES = 30     # minutes to wait after a close before re-entering
 MAX_ATR_FILTER         = 15.0   # skip trade if daily ATR > this (only extreme days)
+MIN_ATR_FILTER         = 3.0    # skip trade if daily ATR < this (too quiet for ORB)
+MIN_SCORE_FILTER       = 3      # minimum |score| to enter — includes -3 SHORT signals
+
+def adaptive_risk_pct(atr: float | None) -> float:
+    """
+    Return risk-per-trade percentage based on daily ATR.
+    High ATR  → trending/volatile market → bet bigger (captures March 2026 crash shorts, April rally longs)
+    Low  ATR  → choppy/quiet market     → bet smaller (limits damage in range-bound chop)
+    """
+    if atr is None:
+        return RISK_PCT_NORMAL
+    if atr >= RISK_ATR_HIGH:
+        return RISK_PCT_HIGH_VOL
+    if atr < RISK_ATR_LOW:
+        return RISK_PCT_LOW_VOL
+    return RISK_PCT_NORMAL
+
 
 # ── Technical-analysis parameters ─────────────────────────────────────────────
 EMA_FAST   = 20
