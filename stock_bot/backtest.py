@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 ET  = ZoneInfo("America/New_York")
 
 STARTING_EQUITY = 100_000.0
-BACKTEST_DAYS   = 30
+BACKTEST_DAYS   = 90
 CLOSE_HOUR_ET   = 15   # force-close at 15:00 ET
 CLOSE_MIN_ET    = 0
 
