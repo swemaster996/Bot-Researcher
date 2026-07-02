@@ -19,6 +19,7 @@ from config import (
     SYMBOL,
     ORB_MINUTES,
     RISK_PER_TRADE_PCT,
+    MAX_POSITION_PCT,
     MAX_STOP_PCT,
     TAKE_PROFIT_RATIO,
     MAX_OPEN_POSITIONS,
@@ -282,14 +283,24 @@ class OrbStrategy:
 
     def _build_long_setup(self, entry: float, equity: float) -> TradeSetup:
         # Stop = below ORB low; capped by MAX_STOP_PCT
-        raw_stop  = self.orb.low
+        raw_stop   = self.orb.low
         floor_stop = entry * (1 - MAX_STOP_PCT)
-        stop      = max(raw_stop, floor_stop)
-        risk_pts  = entry - stop
+        stop       = max(raw_stop, floor_stop)
+        risk_pts   = entry - stop
 
         tp        = entry + risk_pts * TAKE_PROFIT_RATIO
         risk_usd  = equity * RISK_PER_TRADE_PCT
-        qty       = math.floor(risk_usd / risk_pts) if risk_pts > 0 else 0
+
+        # Size by risk (1%), then hard-cap by MAX_POSITION_PCT to prevent all-in
+        qty_risk  = math.floor(risk_usd / risk_pts) if risk_pts > 0 else 0
+        qty_cap   = math.floor((equity * MAX_POSITION_PCT) / entry)
+        qty       = min(qty_risk, qty_cap)
+
+        if qty < qty_risk:
+            log.info(
+                f"Position cap applied: risk-sized qty={qty_risk} → capped to {qty} "
+                f"(max {MAX_POSITION_PCT*100:.0f}% of equity = ${equity*MAX_POSITION_PCT:,.0f})"
+            )
 
         return TradeSetup("buy", entry, stop, tp, qty, risk_usd)
 
@@ -300,9 +311,19 @@ class OrbStrategy:
         stop       = min(raw_stop, ceil_stop)
         risk_pts   = stop - entry
 
-        tp         = entry - risk_pts * TAKE_PROFIT_RATIO
-        risk_usd   = equity * RISK_PER_TRADE_PCT
-        qty        = math.floor(risk_usd / risk_pts) if risk_pts > 0 else 0
+        tp        = entry - risk_pts * TAKE_PROFIT_RATIO
+        risk_usd  = equity * RISK_PER_TRADE_PCT
+
+        # Size by risk (1%), then hard-cap by MAX_POSITION_PCT to prevent all-in
+        qty_risk  = math.floor(risk_usd / risk_pts) if risk_pts > 0 else 0
+        qty_cap   = math.floor((equity * MAX_POSITION_PCT) / entry)
+        qty       = min(qty_risk, qty_cap)
+
+        if qty < qty_risk:
+            log.info(
+                f"Position cap applied: risk-sized qty={qty_risk} → capped to {qty} "
+                f"(max {MAX_POSITION_PCT*100:.0f}% of equity = ${equity*MAX_POSITION_PCT:,.0f})"
+            )
 
         return TradeSetup("sell", entry, stop, tp, qty, risk_usd)
 

@@ -30,14 +30,15 @@ AFTER_HOURS_ANALYSIS     = "17:00"   # evening run for tomorrow prep
 ORB_MINUTES = 15   # opening range window in minutes
 
 # ── Risk management ────────────────────────────────────────────────────────────
-RISK_PER_TRADE_PCT  = 0.01    # 1 % of account equity per trade
-MAX_STOP_PCT        = 0.008   # hard max stop: 0.8 % of entry price
-TAKE_PROFIT_RATIO   = 2.0     # take-profit = 2× the stop distance (2 R)
-TRAILING_AFTER_R       = 1.0   # activate trailing stop once +1 R is reached
-MAX_OPEN_POSITIONS     = 1     # one position at a time
-MAX_TRADES_PER_DAY     = 3     # max entries per trading day
-TRADE_COOLDOWN_MINUTES = 30    # minutes to wait after a close before re-entering
-MAX_ATR_FILTER         = 15.0  # skip trade if daily ATR > this (only extreme days)
+RISK_PER_TRADE_PCT     = 0.01   # 1 % of account equity risked per trade
+MAX_POSITION_PCT       = 0.25   # max 25 % of equity in one position (prevents all-in)
+MAX_STOP_PCT           = 0.008  # hard max stop: 0.8 % of entry price
+TAKE_PROFIT_RATIO      = 2.0    # take-profit = 2× the stop distance (2 R)
+TRAILING_AFTER_R       = 1.0    # activate trailing stop once +1 R is reached
+MAX_OPEN_POSITIONS     = 1      # one position at a time
+MAX_TRADES_PER_DAY     = 3      # max entries per trading day
+TRADE_COOLDOWN_MINUTES = 30     # minutes to wait after a close before re-entering
+MAX_ATR_FILTER         = 15.0   # skip trade if daily ATR > this (only extreme days)
 
 # ── Technical-analysis parameters ─────────────────────────────────────────────
 EMA_FAST   = 20
