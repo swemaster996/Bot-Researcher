@@ -30,6 +30,7 @@ from config import (
     TRADE_COOLDOWN_MINUTES,
     MIN_ATR_FILTER,
     MIN_SCORE_FILTER,
+    VWAP_FILTER,
     adaptive_risk_pct,
 )
 
@@ -136,6 +137,17 @@ class OrbStrategy:
         price  = self.broker.latest_price(SYMBOL)
         equity = self.broker.equity()
         bias: Bias = self.snapshot.bias
+
+        # VWAP filter — only enter if price is on the right side of session VWAP
+        if VWAP_FILTER:
+            vwap = self._session_vwap()
+            if vwap is not None:
+                if bias == "LONG" and price < vwap:
+                    log.info(f"VWAP {vwap:.2f} > price {price:.2f} — LONG under VWAP, hoppar över.")
+                    return False
+                if bias == "SHORT" and price > vwap:
+                    log.info(f"VWAP {vwap:.2f} < price {price:.2f} — SHORT över VWAP, hoppar över.")
+                    return False
 
         setup = None
 
@@ -391,6 +403,28 @@ class OrbStrategy:
         self.highest_seen = setup.entry
         self.lowest_seen  = setup.entry
         self.stop_phase   = "initial"
+
+    def _session_vwap(self) -> float | None:
+        """
+        Compute VWAP from market open (9:30 ET) to now using 1-min bars.
+        Returns None on error (trade is NOT blocked if VWAP unavailable).
+        """
+        try:
+            bars = self.broker.intraday_bars(SYMBOL, lookback_min=390)  # full session
+            et   = bars.index.tz_convert("America/New_York") if bars.index.tz else bars.index
+            today_open = et[0].replace(hour=9, minute=30, second=0)
+            session_bars = bars[et >= today_open]
+            if session_bars.empty:
+                return None
+            tp  = (session_bars["high"] + session_bars["low"] + session_bars["close"]) / 3.0
+            vol = session_bars["volume"]
+            total_vol = vol.sum()
+            if total_vol == 0:
+                return None
+            return float((tp * vol).sum() / total_vol)
+        except Exception as e:
+            log.debug(f"VWAP calc failed (non-blocking): {e}")
+            return None
 
     def reset_for_new_day(self) -> None:
         self.orb             = None

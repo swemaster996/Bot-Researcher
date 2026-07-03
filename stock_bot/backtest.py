@@ -1,6 +1,7 @@
 """
-backtest.py — 30-day historical simulation of the ORB strategy.
+backtest.py — 252-day historical simulation of the ORB strategy.
 Replays each trading day: pre-market analysis → ORB range → breakout entry → TP/SL/EOD exit.
+Supports up to MAX_TRADES_PER_DAY re-entries (with TRADE_COOLDOWN_MINUTES cooldown).
 No real orders are placed.
 
 Run:
@@ -11,6 +12,7 @@ from __future__ import annotations
 import logging
 import math
 import sys
+from collections import Counter
 from datetime import datetime, timedelta, date, time
 from zoneinfo import ZoneInfo
 
@@ -31,6 +33,9 @@ from config import (
     CLOSE_ALL_TIME,
     MIN_ATR_FILTER,
     MIN_SCORE_FILTER,
+    VWAP_FILTER,
+    MAX_TRADES_PER_DAY,
+    TRADE_COOLDOWN_MINUTES,
     adaptive_risk_pct,
 )
 
@@ -104,25 +109,205 @@ def fetch_daily_up_to(broker: Broker, symbol: str, up_to: date, n: int = 250) ->
     return bars[["open", "high", "low", "close", "volume"]].tail(n)
 
 
-# ── Simulation ─────────────────────────────────────────────────────────────────
+# ── VWAP helper ────────────────────────────────────────────────────────────────
+
+def compute_vwap(bars: pd.DataFrame) -> float:
+    """
+    Classic session VWAP: sum(typical_price × volume) / sum(volume).
+    Pass all bars from market open up to (and including) the current bar.
+    """
+    tp  = (bars["high"] + bars["low"] + bars["close"]) / 3.0
+    vol = bars["volume"]
+    total_vol = vol.sum()
+    if total_vol == 0:
+        return float(tp.mean())
+    return float((tp * vol).sum() / total_vol)
+
+
+# ── Single-trade simulation ────────────────────────────────────────────────────
+
+def _simulate_one_trade(
+    bars: pd.DataFrame,
+    scan_bars: pd.DataFrame,
+    snap,
+    orb_high: float,
+    orb_low: float,
+    close_time,
+    atr_pts: float,
+    mkt_open,
+) -> dict:
+    """
+    Scan scan_bars for one breakout entry and manage it to exit.
+    Returns a dict with entry, side, stop, tp, exit_price, exit_reason, exit_ts.
+    exit_reason = 'no_trade' if no entry was found.
+    """
+    entry_price   = None
+    side          = None
+    stop_loss     = None
+    take_profit   = None
+    current_stop  = None
+    highest_seen  = 0.0
+    lowest_seen   = 999_999.0
+    stop_phase    = "initial"
+    exit_price    = None
+    exit_reason   = "no_trade"
+    exit_ts       = None
+
+    for ts, bar in scan_bars.iterrows():
+        if ts >= close_time:
+            break
+
+        if entry_price is None:
+            # ── Look for breakout (close-confirmation required) ──────────────
+            if snap.bias == "LONG" and bar["high"] > orb_high and bar["close"] > orb_high:
+                candidate = orb_high + 0.01
+
+                if VWAP_FILTER:
+                    bars_so_far = bars[(bars.index >= mkt_open) & (bars.index <= ts)]
+                    vwap = compute_vwap(bars_so_far)
+                    if candidate < vwap:
+                        continue   # below VWAP — likely fake, skip
+
+                entry_price  = candidate
+                atr_stop     = entry_price - atr_pts * ATR_STOP_MULTIPLIER
+                safe_floor   = entry_price * (1 - MAX_STOP_PCT)
+                stop_loss    = max(atr_stop, safe_floor)
+                risk_pts     = entry_price - stop_loss
+                take_profit  = entry_price + risk_pts * TAKE_PROFIT_RATIO
+                side         = "buy"
+                current_stop = stop_loss
+                highest_seen = entry_price
+
+            elif snap.bias == "SHORT" and bar["low"] < orb_low and bar["close"] < orb_low:
+                candidate = orb_low - 0.01
+
+                if VWAP_FILTER:
+                    bars_so_far = bars[(bars.index >= mkt_open) & (bars.index <= ts)]
+                    vwap = compute_vwap(bars_so_far)
+                    if candidate > vwap:
+                        continue   # above VWAP — likely fake, skip
+
+                entry_price  = candidate
+                atr_stop     = entry_price + atr_pts * ATR_STOP_MULTIPLIER
+                safe_ceil    = entry_price * (1 + MAX_STOP_PCT)
+                stop_loss    = min(atr_stop, safe_ceil)
+                risk_pts     = stop_loss - entry_price
+                take_profit  = entry_price - risk_pts * TAKE_PROFIT_RATIO
+                side         = "sell"
+                current_stop = stop_loss
+                lowest_seen  = entry_price
+
+        else:
+            # ── Two-phase stop management ────────────────────────────────────
+            initial_risk = abs(entry_price - stop_loss)
+
+            if side == "buy":
+                if bar["high"] > highest_seen:
+                    highest_seen = bar["high"]
+                profit_pts = highest_seen - entry_price
+
+                if stop_phase == "initial" and profit_pts >= initial_risk * BREAKEVEN_AFTER_R:
+                    be_stop = entry_price * 1.0005
+                    if be_stop > current_stop:
+                        current_stop = be_stop
+                        stop_phase = "breakeven"
+
+                if profit_pts >= initial_risk * TRAILING_AFTER_R:
+                    stop_phase = "trailing"
+                    new_stop = highest_seen - atr_pts * 0.5
+                    if new_stop > current_stop + 0.10:
+                        current_stop = new_stop
+
+                if stop_phase == "trailing":
+                    if bar["low"] <= current_stop:
+                        exit_price = round(current_stop, 2); exit_reason = "trailing_stop"; exit_ts = ts; break
+                elif stop_phase == "breakeven":
+                    if bar["high"] >= take_profit:
+                        exit_price = round(take_profit, 2);  exit_reason = "take_profit";   exit_ts = ts; break
+                    if bar["low"] <= current_stop:
+                        exit_price = round(current_stop, 2); exit_reason = "breakeven_stop"; exit_ts = ts; break
+                else:
+                    if bar["high"] >= take_profit:
+                        exit_price = round(take_profit, 2);  exit_reason = "take_profit";   exit_ts = ts; break
+                    if bar["low"] <= current_stop:
+                        exit_price = round(current_stop, 2); exit_reason = "stop_loss";     exit_ts = ts; break
+
+            else:  # SHORT
+                if bar["low"] < lowest_seen:
+                    lowest_seen = bar["low"]
+                profit_pts = entry_price - lowest_seen
+
+                if stop_phase == "initial" and profit_pts >= initial_risk * BREAKEVEN_AFTER_R:
+                    be_stop = entry_price * 0.9995
+                    if be_stop < current_stop:
+                        current_stop = be_stop
+                        stop_phase = "breakeven"
+
+                if profit_pts >= initial_risk * TRAILING_AFTER_R:
+                    stop_phase = "trailing"
+                    new_stop = lowest_seen + atr_pts * 0.5
+                    if new_stop < current_stop - 0.10:
+                        current_stop = new_stop
+
+                if stop_phase == "trailing":
+                    if bar["high"] >= current_stop:
+                        exit_price = round(current_stop, 2); exit_reason = "trailing_stop"; exit_ts = ts; break
+                elif stop_phase == "breakeven":
+                    if bar["low"] <= take_profit:
+                        exit_price = round(take_profit, 2);  exit_reason = "take_profit";   exit_ts = ts; break
+                    if bar["high"] >= current_stop:
+                        exit_price = round(current_stop, 2); exit_reason = "breakeven_stop"; exit_ts = ts; break
+                else:
+                    if bar["low"] <= take_profit:
+                        exit_price = round(take_profit, 2);  exit_reason = "take_profit";   exit_ts = ts; break
+                    if bar["high"] >= current_stop:
+                        exit_price = round(current_stop, 2); exit_reason = "stop_loss";     exit_ts = ts; break
+
+    # EOD close if still in trade at close_time
+    if entry_price and exit_price is None:
+        eod_bars = bars[bars.index >= close_time]
+        if not eod_bars.empty:
+            exit_price  = round(float(eod_bars.iloc[0]["close"]), 2)
+            exit_reason = "eod_close"
+            exit_ts     = close_time
+        else:
+            exit_price  = round(float(scan_bars.iloc[-1]["close"]), 2)
+            exit_reason = "eod_close"
+            exit_ts     = scan_bars.index[-1]
+
+    return {
+        "entry_price": entry_price,
+        "side":        side,
+        "stop_loss":   stop_loss,
+        "take_profit": take_profit,
+        "exit_price":  exit_price,
+        "exit_reason": exit_reason,
+        "exit_ts":     exit_ts,
+    }
+
+
+# ── Day simulation ─────────────────────────────────────────────────────────────
 
 def simulate_day(broker: Broker, day: date, equity: float) -> dict:
     """
     Simulate one trading day. Returns a result dict.
+    Allows up to MAX_TRADES_PER_DAY re-entries after stops
+    (with TRADE_COOLDOWN_MINUTES cooldown between trades).
     """
     result = {
-        "date":        day,
-        "bias":        "—",
-        "orb_high":    None,
-        "orb_low":     None,
-        "entry":       None,
-        "side":        None,
-        "stop_loss":   None,
-        "take_profit": None,
-        "exit_price":  None,
-        "exit_reason": "no_trade",
-        "pnl":         0.0,
-        "equity":      equity,
+        "date":         day,
+        "bias":         "—",
+        "orb_high":     None,
+        "orb_low":      None,
+        "entry":        None,
+        "side":         None,
+        "stop_loss":    None,
+        "take_profit":  None,
+        "exit_price":   None,
+        "exit_reason":  "no_trade",
+        "pnl":          0.0,
+        "equity":       equity,
+        "trades_count": 0,
     }
 
     # ── Pre-market analysis ──────────────────────────────────────────────────
@@ -142,12 +327,10 @@ def simulate_day(broker: Broker, day: date, equity: float) -> dict:
         result["exit_reason"] = "flat_bias"
         return result
 
-    # Min conviction filter — skip weak signals
     if abs(snap.score) < MIN_SCORE_FILTER:
         result["exit_reason"] = "low_conviction"
         return result
 
-    # Min ATR filter — skip low-volatility days (too quiet for ORB)
     if snap.atr and snap.atr < MIN_ATR_FILTER:
         result["exit_reason"] = "low_atr"
         return result
@@ -178,172 +361,82 @@ def simulate_day(broker: Broker, day: date, equity: float) -> dict:
     result["orb_high"] = round(orb_high, 2)
     result["orb_low"]  = round(orb_low,  2)
 
-    # ── Scan post-ORB bars for breakout ─────────────────────────────────────
-    post_orb   = bars[bars.index >= orb_end]
     close_time = bars.index[0].replace(hour=CLOSE_HOUR_ET, minute=CLOSE_MIN_ET, second=0)
     atr_pts    = snap.atr if snap.atr else 5.0
+    post_orb   = bars[bars.index >= orb_end]
 
-    entry_price   = None
-    side          = None
-    stop_loss     = None
-    take_profit   = None
-    current_stop  = None   # tracks live stop (moves with trailing)
-    highest_seen  = 0.0    # for LONG trailing
-    lowest_seen   = 999999.0  # for SHORT trailing
-    stop_phase    = "initial"  # initial → trailing
+    # ── Multi-trade loop ─────────────────────────────────────────────────────
+    running_equity = equity
+    day_pnl        = 0.0
+    trades_count   = 0
+    last_exit_ts   = None
 
-    for ts, bar in post_orb.iterrows():
-        if ts >= close_time:
-            break   # EOD — no new entries
-
-        if entry_price is None:
-            # ── Look for breakout ──────────────────────────────────────────
-            if snap.bias == "LONG" and bar["high"] > orb_high:
-                entry_price  = orb_high + 0.01
-                atr_stop     = entry_price - atr_pts * ATR_STOP_MULTIPLIER
-                safe_floor   = entry_price * (1 - MAX_STOP_PCT)
-                stop_loss    = max(atr_stop, safe_floor)
-                risk_pts     = entry_price - stop_loss
-                take_profit  = entry_price + risk_pts * TAKE_PROFIT_RATIO
-                side         = "buy"
-                current_stop = stop_loss
-                highest_seen = entry_price
-                result["entry"]       = round(entry_price, 2)
-                result["side"]        = side
-                result["stop_loss"]   = round(stop_loss,   2)
-                result["take_profit"] = round(take_profit, 2)
-
-            elif snap.bias == "SHORT" and bar["low"] < orb_low:
-                entry_price  = orb_low - 0.01
-                atr_stop     = entry_price + atr_pts * ATR_STOP_MULTIPLIER
-                safe_ceil    = entry_price * (1 + MAX_STOP_PCT)
-                stop_loss    = min(atr_stop, safe_ceil)
-                risk_pts     = stop_loss - entry_price
-                take_profit  = entry_price - risk_pts * TAKE_PROFIT_RATIO
-                side         = "sell"
-                current_stop = stop_loss
-                lowest_seen  = entry_price
-                result["entry"]       = round(entry_price, 2)
-                result["side"]        = side
-                result["stop_loss"]   = round(stop_loss,   2)
-                result["take_profit"] = round(take_profit, 2)
-
+    while trades_count < MAX_TRADES_PER_DAY:
+        # Determine which bars to scan (apply cooldown after a stop)
+        if last_exit_ts is not None:
+            cooldown_end = last_exit_ts + pd.Timedelta(minutes=TRADE_COOLDOWN_MINUTES)
+            scan_bars = post_orb[post_orb.index >= cooldown_end]
         else:
-            # ── Two-phase stop: breakeven at +BREAKEVEN_AFTER_R, then ATR
-            #    trailing at +TRAILING_AFTER_R. Prevents a trade that ran to
-            #    +1-1.9R from round-tripping back to a full stop-loss.
-            initial_risk = abs(entry_price - stop_loss)
+            scan_bars = post_orb
 
-            if side == "buy":
-                if bar["high"] > highest_seen:
-                    highest_seen = bar["high"]
-                profit_pts = highest_seen - entry_price
+        # Filter to before close_time
+        scan_bars = scan_bars[scan_bars.index < close_time]
 
-                if stop_phase == "initial" and profit_pts >= initial_risk * BREAKEVEN_AFTER_R:
-                    be_stop = entry_price * 1.0005
-                    if be_stop > current_stop:
-                        current_stop = be_stop
-                        stop_phase = "breakeven"
+        if scan_bars.empty:
+            break
 
-                if profit_pts >= initial_risk * TRAILING_AFTER_R:
-                    stop_phase = "trailing"
-                    new_stop = highest_seen - atr_pts * 0.5
-                    if new_stop > current_stop + 0.10:
-                        current_stop = new_stop
+        t = _simulate_one_trade(
+            bars=bars,
+            scan_bars=scan_bars,
+            snap=snap,
+            orb_high=orb_high,
+            orb_low=orb_low,
+            close_time=close_time,
+            atr_pts=atr_pts,
+            mkt_open=mkt_open,
+        )
 
-                # Check exits
-                if stop_phase == "trailing":
-                    if bar["low"] <= current_stop:
-                        result["exit_price"]  = round(current_stop, 2)
-                        result["exit_reason"] = "trailing_stop"
-                        break
-                elif stop_phase == "breakeven":
-                    if bar["high"] >= take_profit:
-                        result["exit_price"]  = round(take_profit, 2)
-                        result["exit_reason"] = "take_profit"
-                        break
-                    if bar["low"] <= current_stop:
-                        result["exit_price"]  = round(current_stop, 2)
-                        result["exit_reason"] = "breakeven_stop"
-                        break
-                else:
-                    if bar["high"] >= take_profit:
-                        result["exit_price"]  = round(take_profit, 2)
-                        result["exit_reason"] = "take_profit"
-                        break
-                    if bar["low"] <= current_stop:
-                        result["exit_price"]  = round(current_stop, 2)
-                        result["exit_reason"] = "stop_loss"
-                        break
+        if t["entry_price"] is None:
+            break   # no breakout found in remaining bars
 
-            else:  # SHORT
-                if bar["low"] < lowest_seen:
-                    lowest_seen = bar["low"]
-                profit_pts = entry_price - lowest_seen
-
-                if stop_phase == "initial" and profit_pts >= initial_risk * BREAKEVEN_AFTER_R:
-                    be_stop = entry_price * 0.9995
-                    if be_stop < current_stop:
-                        current_stop = be_stop
-                        stop_phase = "breakeven"
-
-                if profit_pts >= initial_risk * TRAILING_AFTER_R:
-                    stop_phase = "trailing"
-                    new_stop = lowest_seen + atr_pts * 0.5
-                    if new_stop < current_stop - 0.10:
-                        current_stop = new_stop
-
-                # Check exits
-                if stop_phase == "trailing":
-                    if bar["high"] >= current_stop:
-                        result["exit_price"]  = round(current_stop, 2)
-                        result["exit_reason"] = "trailing_stop"
-                        break
-                elif stop_phase == "breakeven":
-                    if bar["low"] <= take_profit:
-                        result["exit_price"]  = round(take_profit, 2)
-                        result["exit_reason"] = "take_profit"
-                        break
-                    if bar["high"] >= current_stop:
-                        result["exit_price"]  = round(current_stop, 2)
-                        result["exit_reason"] = "breakeven_stop"
-                        break
-                else:
-                    if bar["low"] <= take_profit:
-                        result["exit_price"]  = round(take_profit, 2)
-                        result["exit_reason"] = "take_profit"
-                        break
-                    if bar["high"] >= current_stop:
-                        result["exit_price"]  = round(current_stop, 2)
-                        result["exit_reason"] = "stop_loss"
-                        break
-
-    # EOD close if still in trade
-    if entry_price and result["exit_price"] is None:
-        eod_bars = post_orb[post_orb.index >= close_time]
-        if not eod_bars.empty:
-            result["exit_price"]  = round(float(eod_bars.iloc[0]["close"]), 2)
-            result["exit_reason"] = "eod_close"
-        else:
-            result["exit_price"]  = round(float(post_orb.iloc[-1]["close"]), 2)
-            result["exit_reason"] = "eod_close"
-
-    # ── Calculate P&L ────────────────────────────────────────────────────────
-    if entry_price and result["exit_price"]:
-        risk_pts  = abs(entry_price - stop_loss)   # original risk for sizing
-        risk_pct  = adaptive_risk_pct(snap.atr)    # scale risk by market volatility
-        qty_risk  = math.floor((equity * risk_pct) / risk_pts) if risk_pts > 0 else 0
-        # Conviction-based cap: use abs(score) to look up position pct
+        # Calculate P&L for this trade
+        risk_pts  = abs(t["entry_price"] - t["stop_loss"])
+        risk_pct  = adaptive_risk_pct(snap.atr)
+        qty_risk  = math.floor((running_equity * risk_pct) / risk_pts) if risk_pts > 0 else 0
         abs_score = abs(snap.score)
         cap_pct   = POSITION_PCT_BY_SCORE.get(abs_score, POSITION_PCT_BY_SCORE[2])
-        qty_cap   = math.floor((equity * cap_pct) / entry_price)
+        qty_cap   = math.floor((running_equity * cap_pct) / t["entry_price"])
         qty       = min(qty_risk, qty_cap)
-        if side == "buy":
-            pnl = (result["exit_price"] - entry_price) * qty
+
+        if t["side"] == "buy":
+            trade_pnl = (t["exit_price"] - t["entry_price"]) * qty
         else:
-            pnl = (entry_price - result["exit_price"]) * qty
-        result["pnl"]    = round(pnl, 2)
-        result["equity"] = round(equity + pnl, 2)
+            trade_pnl = (t["entry_price"] - t["exit_price"]) * qty
+
+        day_pnl        += trade_pnl
+        running_equity += trade_pnl
+        trades_count   += 1
+        last_exit_ts    = t["exit_ts"]
+
+        # Store first trade's details in result for reporting
+        if result["entry"] is None:
+            result["entry"]       = round(t["entry_price"], 2)
+            result["side"]        = t["side"]
+            result["stop_loss"]   = round(t["stop_loss"],   2)
+            result["take_profit"] = round(t["take_profit"], 2)
+
+        # Always update with the latest exit
+        result["exit_price"]  = t["exit_price"]
+        result["exit_reason"] = t["exit_reason"]
+
+        # After TP, trailing stop, or EOD: day is done
+        if t["exit_reason"] in ("take_profit", "trailing_stop", "eod_close"):
+            break
+        # After stop_loss / breakeven_stop: try to re-enter (loop continues)
+
+    result["pnl"]          = round(day_pnl, 2)
+    result["equity"]       = round(running_equity, 2)
+    result["trades_count"] = trades_count
 
     return result
 
@@ -367,39 +460,57 @@ def main():
         equity = r["equity"]
         results.append(r)
 
+        tc     = r["trades_count"]
+        tc_str = f" ×{tc}" if tc > 1 else ""
         status = f"{'✅' if r['pnl'] > 0 else '❌' if r['pnl'] < 0 else '—'}"
         log.info(
-            f"{r['date']}  {r['bias']:5}  {r['exit_reason']:12}  "
-            f"PnL: {r['pnl']:+8.2f}  Equity: ${r['equity']:,.2f}  {status}"
+            f"{r['date']}  {r['bias']:5}  {r['exit_reason']:14}  "
+            f"PnL: {r['pnl']:+8.2f}  Equity: ${r['equity']:,.2f}  {status}{tc_str}"
         )
 
     # ── Summary ──────────────────────────────────────────────────────────────
-    _skipped    = {"no_trade", "flat_bias", "low_conviction", "analysis_error",
-                   "data_error", "no_intraday_data", "no_orb_bars", "insufficient_history"}
-    trades      = [r for r in results if r["exit_reason"] not in _skipped]
-    wins        = [r for r in trades if r["pnl"] > 0]
-    losses      = [r for r in trades if r["pnl"] < 0]
+    _skipped = {"no_trade", "flat_bias", "low_conviction", "analysis_error",
+                "data_error", "no_intraday_data", "no_orb_bars",
+                "insufficient_history", "low_atr"}
+
+    trade_days  = [r for r in results if r["exit_reason"] not in _skipped]
+    skipped_days = [r for r in results if r["exit_reason"] in _skipped]
+    wins        = [r for r in trade_days if r["pnl"] > 0]
+    losses      = [r for r in trade_days if r["pnl"] < 0]
     total_pnl   = sum(r["pnl"] for r in results)
-    win_rate    = len(wins) / len(trades) * 100 if trades else 0
+    win_rate    = len(wins) / len(trade_days) * 100 if trade_days else 0
     avg_win     = sum(r["pnl"] for r in wins)   / len(wins)   if wins   else 0
     avg_loss    = sum(r["pnl"] for r in losses) / len(losses) if losses else 0
     profit_factor = abs(sum(r["pnl"] for r in wins) / sum(r["pnl"] for r in losses)) if losses else float("inf")
+    total_trades  = sum(r["trades_count"] for r in results)
 
     log.info("")
     log.info("=" * 60)
     log.info("  BACKTEST RESULTS")
     log.info("=" * 60)
-    log.info(f"  Period:         {days[0]} → {days[-1]}")
+    log.info(f"  Period:          {days[0]} → {days[-1]}")
     log.info(f"  Starting equity: ${STARTING_EQUITY:,.2f}")
     log.info(f"  Final equity:    ${equity:,.2f}")
     log.info(f"  Total P&L:       ${total_pnl:+,.2f}  ({(total_pnl/STARTING_EQUITY*100):+.2f}%)")
-    log.info(f"  Trades taken:    {len(trades)} / {BACKTEST_DAYS} days")
-    log.info(f"  Win rate:        {win_rate:.1f}%  ({len(wins)}W / {len(losses)}L)")
+    log.info(f"  Trade days:      {len(trade_days)} / {BACKTEST_DAYS}  (total trades: {total_trades})")
+    log.info(f"  Win rate:        {win_rate:.1f}%  ({len(wins)}W / {len(losses)}L, by day P&L)")
     log.info(f"  Avg win:         ${avg_win:+,.2f}")
     log.info(f"  Avg loss:        ${avg_loss:+,.2f}")
     log.info(f"  Profit factor:   {profit_factor:.2f}")
+
+    log.info("")
+    log.info("  Skipped days breakdown:")
+    skip_counts = Counter(r["exit_reason"] for r in skipped_days)
+    for reason, count in skip_counts.most_common():
+        log.info(f"    {reason:22s}: {count:3d} days")
+
     log.info("=" * 60)
 
     # Save to CSV
     df = pd.DataFrame(results)
-    df.to_csv("backtest_results.csv", index=False
+    df.to_csv("backtest_results.csv", index=False)
+    log.info("  Results saved to backtest_results.csv")
+
+
+if __name__ == "__main__":
+    main()

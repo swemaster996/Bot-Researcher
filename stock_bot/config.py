@@ -48,9 +48,11 @@ MAX_STOP_PCT           = 0.008  # fixed stop cap: 0.8% of entry price (original 
 TAKE_PROFIT_RATIO      = 2.0    # take-profit = 2× the stop distance (2 R)
 
 # Adaptive risk scaling by ATR — bet bigger on trending days, smaller on choppy days
-RISK_ATR_HIGH      = 8.0    # ATR ≥ this → trending market (e.g. March 2026 crash)
+RISK_ATR_EXTREME   = 9.0    # ATR ≥ this → crash/rally day (e.g. March 2026 ATR 9+)
+RISK_ATR_HIGH      = 8.0    # ATR ≥ this → trending market
 RISK_ATR_LOW       = 5.0    # ATR < this → choppy/quiet market
-RISK_PCT_HIGH_VOL  = 0.015  # 1.5% risk on trending days  (default was 1.0%)
+RISK_PCT_EXTREME   = 0.020  # 2.0% risk on extreme vol days (ATR ≥ 9)
+RISK_PCT_HIGH_VOL  = 0.015  # 1.5% risk on trending days (ATR 8–9)
 RISK_PCT_NORMAL    = 0.010  # 1.0% risk on normal days
 RISK_PCT_LOW_VOL   = 0.005  # 0.5% risk on quiet days
 BREAKEVEN_AFTER_R      = 0.75   # move stop to entry once +0.75 R is reached — stops winners round-tripping to a full loss
@@ -61,15 +63,20 @@ TRADE_COOLDOWN_MINUTES = 30     # minutes to wait after a close before re-enteri
 MAX_ATR_FILTER         = 15.0   # skip trade if daily ATR > this (only extreme days)
 MIN_ATR_FILTER         = 3.0    # skip trade if daily ATR < this (too quiet for ORB)
 MIN_SCORE_FILTER       = 3      # minimum |score| to enter — includes -3 SHORT signals
+VWAP_FILTER            = True   # skip entry if price is on wrong side of VWAP (filters false breakouts in chop)
 
 def adaptive_risk_pct(atr: float | None) -> float:
     """
     Return risk-per-trade percentage based on daily ATR.
-    High ATR  → trending/volatile market → bet bigger (captures March 2026 crash shorts, April rally longs)
-    Low  ATR  → choppy/quiet market     → bet smaller (limits damage in range-bound chop)
+    Extreme ATR (≥9) → crash/rally day  → bet 2.0% (captures big March 2026 moves)
+    High ATR    (≥8) → trending market  → bet 1.5%
+    Normal ATR       → ordinary day     → bet 1.0%
+    Low ATR     (<5) → choppy/quiet     → bet 0.5% (limits damage in chop)
     """
     if atr is None:
         return RISK_PCT_NORMAL
+    if atr >= RISK_ATR_EXTREME:
+        return RISK_PCT_EXTREME
     if atr >= RISK_ATR_HIGH:
         return RISK_PCT_HIGH_VOL
     if atr < RISK_ATR_LOW:
