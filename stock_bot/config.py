@@ -63,6 +63,7 @@ TRADE_COOLDOWN_MINUTES = 30     # minutes to wait after a close before re-enteri
 MAX_ATR_FILTER         = 15.0   # skip trade if daily ATR > this (only extreme days)
 MIN_ATR_FILTER         = 3.0    # skip trade if daily ATR < this (too quiet for ORB)
 MIN_SCORE_FILTER       = 3      # minimum |score| to enter — includes -3 SHORT signals
+MACD_CONFIRMATION      = True   # require MACD histogram to align with bias (LONG: hist>0, SHORT: hist<0)
 VWAP_FILTER            = True   # skip entry if price is on wrong side of VWAP (filters false breakouts in chop)
 
 def adaptive_risk_pct(atr: float | None) -> float:
@@ -96,5 +97,4 @@ BB_PERIOD  = 20
 BB_STD     = 2.0
 ATR_PERIOD = 14
 
-# ── Logging ────────────────────────────────────────────────────────────────────
-LOG_FILE = "trading_bot.log"
+# ── Logging ──────────────────────────────────────────�

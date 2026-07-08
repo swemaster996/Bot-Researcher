@@ -33,6 +33,7 @@ from config import (
     CLOSE_ALL_TIME,
     MIN_ATR_FILTER,
     MIN_SCORE_FILTER,
+    MACD_CONFIRMATION,
     VWAP_FILTER,
     MAX_TRADES_PER_DAY,
     TRADE_COOLDOWN_MINUTES,
@@ -331,6 +332,15 @@ def simulate_day(broker: Broker, day: date, equity: float) -> dict:
         result["exit_reason"] = "low_conviction"
         return result
 
+    # MACD direction must confirm the bias (filters entries where momentum contradicts signal)
+    if MACD_CONFIRMATION:
+        if snap.bias == "LONG" and snap.macd_hist < 0:
+            result["exit_reason"] = "macd_conflict"
+            return result
+        if snap.bias == "SHORT" and snap.macd_hist > 0:
+            result["exit_reason"] = "macd_conflict"
+            return result
+
     if snap.atr and snap.atr < MIN_ATR_FILTER:
         result["exit_reason"] = "low_atr"
         return result
@@ -469,8 +479,8 @@ def main():
         )
 
     # ── Summary ──────────────────────────────────────────────────────────────
-    _skipped = {"no_trade", "flat_bias", "low_conviction", "analysis_error",
-                "data_error", "no_intraday_data", "no_orb_bars",
+    _skipped = {"no_trade", "flat_bias", "low_conviction", "macd_conflict",
+                "analysis_error", "data_error", "no_intraday_data", "no_orb_bars",
                 "insufficient_history", "low_atr"}
 
     trade_days  = [r for r in results if r["exit_reason"] not in _skipped]
@@ -499,18 +509,4 @@ def main():
     log.info(f"  Profit factor:   {profit_factor:.2f}")
 
     log.info("")
-    log.info("  Skipped days breakdown:")
-    skip_counts = Counter(r["exit_reason"] for r in skipped_days)
-    for reason, count in skip_counts.most_common():
-        log.info(f"    {reason:22s}: {count:3d} days")
-
-    log.info("=" * 60)
-
-    # Save to CSV
-    df = pd.DataFrame(results)
-    df.to_csv("backtest_results.csv", index=False)
-    log.info("  Results saved to backtest_results.csv")
-
-
-if __name__ == "__main__":
-    main()
+    log
